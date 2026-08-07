@@ -38,6 +38,13 @@ configuration.
 | Guessed exposure becomes quantitative fact | Seed data is qualitative; numeric exposure requires an explicit value, unit, and provenance |
 | Graph traversal obscures provenance | Paths retain exact object versions, event evidence, edge provenance, cutoff, and confidence |
 | Graph cycles or path explosion | Traversal is deterministic, cycle-aware, and bounded to a small depth |
+| Publisher reputation is mistaken for truth | Trust class describes provenance only; normal news remains untrusted unstructured evidence |
+| Prompt or policy injection in article text | Raw text is data; deterministic parsing exposes no permission, policy, execution, or graph-mutation path |
+| Edited article rewrites history | Every changed URI/content observation is an immutable revision with its own local observation time |
+| Syndicated copies inflate corroboration | Normalized fingerprints and publisher identity prevent copies from counting as independent |
+| Malformed XML or encoding reaches extraction | Size limit, strict decoding, DTD/entity rejection, source-contract checks, and quarantine |
+| Later review leaks into replay | Candidate reviews and corroborations are append-only and independently cutoff-filtered |
+| Contradictory evidence is silently discarded | Explicit contradiction records preserve both evidence IDs and unresolved status |
 | Lifecycle state changes without audit | Every explicit transition is an immutable, ordered record with rationale and evidence |
 | Database downgrade or misdirection | Explicit PostgreSQL URL, mandatory configuration, TLS default, versioned Alembic migration |
 | Mutation through ORM or direct SQL | ORM hooks fail and PostgreSQL triggers reject updates/deletes; production roles remain least-privilege |
@@ -99,3 +106,11 @@ application role from the migration owner, audit DDL and trigger changes, and
 test restore procedures. The database-trigger behavior is validated by rendered
 migration SQL and should also be exercised against the deployment's exact
 PostgreSQL version before release.
+
+News feed content remains adversarial even when delivered by an established
+publisher. RSS summaries can be incomplete, edited, syndicated, incorrectly
+timestamped, or legally restricted. v0.6 retains feed artifacts for internal
+provenance but does not fetch linked article pages, translate text, or infer
+sentiment. Exact deterministic duplicate detection will miss paraphrased
+syndication. Operator review remains necessary for corroboration, contradiction
+resolution, and any future canonical-event promotion.

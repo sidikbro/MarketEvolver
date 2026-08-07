@@ -41,6 +41,9 @@ Israel market ontology on top of the evidence and event layers.
 12. **Knowledge Graph** stores versioned entities, aliases, taxonomy edges,
     relationships, and exposures. Traversal is deterministic, cutoff-aware, and
     returns candidate mechanisms with provenance rather than forecasts.
+13. **News Lab** stores raw feeds before parsing, classifies evidence security
+    independently from publisher trust, extracts only exact entities, and emits
+    reviewable candidates rather than canonical events.
 
 ```text
 fetch -> local first_observed_at + SHA-256 -> immutable raw artifact + receipt
@@ -165,6 +168,19 @@ PostgreSQL remains the graph system of record. The current bounded traversals
 fit relational joins and keep bitemporal enforcement close to the provenance
 tables; a separate graph database would add synchronization and historical-view
 risks without a demonstrated workload need.
+
+## News Lab
+
+Alembic revision `0005` adds immutable news items, extracted entity links,
+event candidates, review actions, corroborations, and contradictions. Normal
+news is always untrusted unstructured evidence. Raw RSS bytes are retained before
+strict parsing, and malformed material becomes an auditable quarantine record.
+
+News replay filters each item by local first observation and each review or
+corroboration by its own creation time. Edited articles append a revision linked
+to the earlier observation. Exact source/content reingestion is idempotent, while
+normalized cross-publisher copies are marked syndicated rather than independent.
+No News Lab object has an automatic edge to canonical events or runtime policy.
 
 ## Governance
 

@@ -1,5 +1,20 @@
 # Data sources
 
+## BBC Business
+
+- **Registry ID:** `uk.bbc.business`
+- **Authority/trust:** established news; this does not imply factual correctness
+- **Endpoint:** public BBC Business RSS feed
+- **Cadence:** publisher-controlled, typically multiple updates per day
+- **Timestamp semantics:** RSS `pubDate` is publisher-supplied;
+  `first_observed_at` is generated locally and controls historical visibility
+- **Revision behavior:** entries can be edited or removed; changed content at
+  the same URI is retained as a new immutable revision
+- **Access/storage:** feed payloads retained for internal provenance only; linked
+  pages are not scraped or redistributed
+- **Limitations:** feed summaries may omit article detail, and no explicit
+  revision history is supplied
+
 The source registry is the allowlist and metadata catalog for external
 authorities. Registry inclusion does not grant runtime network access, and a
 disabled source cannot be ingested.
