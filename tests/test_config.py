@@ -11,6 +11,7 @@ class ConfigTests(unittest.TestCase):
         config = load_config(Path(__file__).parents[1] / "config" / "default.toml")
         self.assertFalse(config.governance.allow_execution)
         self.assertFalse(config.runtime_permissions.broker_access)
+        self.assertEqual(config.research_provider.provider, "mock")
 
     def test_execution_cannot_be_enabled(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

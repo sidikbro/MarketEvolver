@@ -84,12 +84,25 @@ class ArtifactStorageConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class ResearchProviderConfig:
+    provider: str = "mock"
+    model: str = "mock-research-v1"
+    endpoint_env: str = "MARKET_EVOLVER_LLM_ENDPOINT"
+    authorization_env: str = "MARKET_EVOLVER_LLM_AUTHORIZATION"
+
+    def validate(self) -> None:
+        if self.provider not in {"mock", "json-http"}:
+            raise ConfigurationError("research provider must be mock or json-http")
+
+
+@dataclass(frozen=True, slots=True)
 class AppConfig:
     research: ResearchConfig
     governance: GovernanceConfig
     runtime_permissions: RuntimePermissions
     database: DatabaseConfig
     artifact_storage: ArtifactStorageConfig
+    research_provider: ResearchProviderConfig
 
 
 def _section(data: dict[str, Any], name: str) -> dict[str, Any]:
@@ -109,10 +122,12 @@ def load_config(path: str | Path) -> AppConfig:
             runtime_permissions=RuntimePermissions(**_section(data, "runtime_permissions")),
             database=DatabaseConfig(**_section(data, "database")),
             artifact_storage=ArtifactStorageConfig(**_section(data, "artifact_storage")),
+            research_provider=ResearchProviderConfig(**_section(data, "research_provider")),
         )
     except TypeError as exc:
         raise ValidationError(f"invalid configuration: {exc}") from exc
     config.governance.validate()
     if config.runtime_permissions.broker_access:
         raise GovernanceViolation("broker_access is forbidden")
+    config.research_provider.validate()
     return config

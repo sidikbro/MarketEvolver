@@ -29,3 +29,11 @@ require_tls = true
 # MARKET_EVOLVER_ARTIFACT_ROOT, e.g. /mnt/marketevolver.
 root = "data"
 root_env = "MARKET_EVOLVER_ARTIFACT_ROOT"
+
+[research_provider]
+# The offline deterministic provider remains the default. External endpoints also
+# require host-granted network_access and environment-supplied endpoint/authorization.
+provider = "mock"
+model = "mock-research-v1"
+endpoint_env = "MARKET_EVOLVER_LLM_ENDPOINT"
+authorization_env = "MARKET_EVOLVER_LLM_AUTHORIZATION"

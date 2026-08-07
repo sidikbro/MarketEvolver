@@ -108,6 +108,25 @@ class CliTests(unittest.TestCase):
             ).company_id,
             "nice",
         )
+
+    def test_research_commands_are_registered(self) -> None:
+        parser = build_parser()
+        context = parser.parse_args(
+            [
+                "research",
+                "build-context",
+                "nice",
+                "--at",
+                "2025-01-02T12:00:00+00:00",
+                "--anonymize",
+            ]
+        )
+        self.assertEqual(context.company_id, "nice")
+        self.assertTrue(context.anonymize)
+        self.assertEqual(
+            parser.parse_args(["research", "review", "hypothesis:1"]).hypothesis_id,
+            "hypothesis:1",
+        )
         self.assertEqual(parser.parse_args(["filings", "list", "nice"]).company_id, "nice")
         self.assertEqual(
             parser.parse_args(

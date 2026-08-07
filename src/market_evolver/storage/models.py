@@ -616,6 +616,132 @@ class CompanyExposureModel(Base):
     version: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
+class ResearchContextModel(Base):
+    __tablename__ = "research_contexts"
+
+    research_context_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    cutoff: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    subject_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    items: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False)
+    anonymized: Mapped[bool] = mapped_column(nullable=False)
+
+
+class ContextManifestModel(Base):
+    __tablename__ = "research_context_manifests"
+
+    manifest_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    research_context_id: Mapped[str] = mapped_column(
+        ForeignKey("research_contexts.research_context_id"), nullable=False, index=True
+    )
+    cutoff: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    subject_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    evidence_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    event_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    policy_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    filing_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    fundamental_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    graph_versions: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    model_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    prompt_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class AnonymizationMappingModel(Base):
+    __tablename__ = "research_anonymization_mappings"
+
+    mapping_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    research_context_id: Mapped[str] = mapped_column(
+        ForeignKey("research_contexts.research_context_id"), nullable=False, index=True
+    )
+    values: Mapped[list[list[str]]] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class ProviderCallModel(Base):
+    __tablename__ = "research_provider_calls"
+
+    call_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    provider_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    model_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    responded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    settings: Mapped[list[list[str]]] = mapped_column(JSON, nullable=False)
+    prompt_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    token_usage: Mapped[list[list[Any]]] = mapped_column(JSON, nullable=False)
+    raw_response_hash: Mapped[str] = mapped_column(String(72), nullable=False)
+    structured_result: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False)
+
+
+class ResearchClaimModel(Base):
+    __tablename__ = "research_claims"
+
+    claim_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    claim_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    text: Mapped[str] = mapped_column(String, nullable=False)
+    supporting_evidence_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    contradicting_evidence_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    entities: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    mechanisms: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    horizon: Mapped[str] = mapped_column(String(256), nullable=False)
+    confidence: Mapped[float] = mapped_column(nullable=False)
+    model_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    prompt_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    review_state: Mapped[str] = mapped_column(String(16), nullable=False)
+
+
+class ResearchHypothesisModel(Base):
+    __tablename__ = "research_hypotheses_v2"
+
+    hypothesis_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    subject_entities: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    mechanism_chain: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    evidence_basis: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    counterevidence: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    expected_horizon: Mapped[str] = mapped_column(String(256), nullable=False)
+    measurable_outcome: Mapped[str] = mapped_column(String, nullable=False)
+    falsification_criterion: Mapped[str] = mapped_column(String, nullable=False)
+    confidence: Mapped[float] = mapped_column(nullable=False)
+    generated_by: Mapped[str] = mapped_column(String(128), nullable=False)
+    generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    cutoff: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+
+
+class ResearchReviewModel(Base):
+    __tablename__ = "research_reviews"
+
+    reviewer_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    hypothesis_id: Mapped[str] = mapped_column(
+        ForeignKey("research_hypotheses_v2.hypothesis_id"), nullable=False, index=True
+    )
+    accepted: Mapped[bool] = mapped_column(nullable=False)
+    issues: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    alternative_explanations: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    stale_evidence_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    reviewed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    model_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    prompt_version: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
+class ResearchTraceModel(Base):
+    __tablename__ = "research_traces"
+
+    trace_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    manifest_id: Mapped[str] = mapped_column(
+        ForeignKey("research_context_manifests.manifest_id"), nullable=False
+    )
+    provider_call_id: Mapped[str] = mapped_column(
+        ForeignKey("research_provider_calls.call_id"), nullable=False
+    )
+    claim_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    hypothesis_id: Mapped[str | None] = mapped_column(String(96))
+    reviewer_id: Mapped[str | None] = mapped_column(String(96))
+    validation_state: Mapped[str] = mapped_column(String(32), nullable=False)
+    accepted: Mapped[bool] = mapped_column(nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
 def _forbid_mutation(_mapper: Any, _connection: Any, target: Any) -> None:
     raise ImmutableRecordError(
         f"{type(target).__name__} {getattr(target, 'provenance_id', '')} is immutable"
@@ -646,6 +772,14 @@ for _model in (
     FundamentalModel,
     DerivedFundamentalModel,
     CompanyExposureModel,
+    ResearchContextModel,
+    ContextManifestModel,
+    AnonymizationMappingModel,
+    ProviderCallModel,
+    ResearchClaimModel,
+    ResearchHypothesisModel,
+    ResearchReviewModel,
+    ResearchTraceModel,
     SourceModel,
     EvidenceModel,
     EventModel,

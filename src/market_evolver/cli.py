@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
@@ -36,6 +37,11 @@ from market_evolver.observatory.repositories import (
     observatory_summary,
 )
 from market_evolver.observatory.schemas import CanonicalEvent, EventStatus
+from market_evolver.research.gates import anonymize_context
+from market_evolver.research.providers import JsonHttpProvider, MockProvider, ResearchProvider
+from market_evolver.research.repositories import SqlResearchRepository
+from market_evolver.research.schemas import AnonymizationMapping
+from market_evolver.research.service import ResearchService
 from market_evolver.sources.registry import DEFAULT_REGISTRY
 from market_evolver.storage.artifacts import LocalArtifactStore
 from market_evolver.storage.database import create_postgres_engine
@@ -145,6 +151,22 @@ def build_parser() -> argparse.ArgumentParser:
     exposures_show = exposures_commands.add_parser("show")
     exposures_show.add_argument("company_id")
     exposures_show.add_argument("--at", required=True)
+    research = commands.add_parser("research")
+    research_commands = research.add_subparsers(dest="research_command", required=True)
+    build_context = research_commands.add_parser("build-context")
+    build_context.add_argument("company_id")
+    build_context.add_argument("--at", required=True)
+    build_context.add_argument("--anonymize", action="store_true")
+    inspect_context = research_commands.add_parser("inspect-context")
+    inspect_context.add_argument("context_id")
+    hypothesize = research_commands.add_parser("hypothesize")
+    hypothesize.add_argument("company_id")
+    hypothesize.add_argument("--at", required=True)
+    hypothesize.add_argument("--anonymize", action="store_true")
+    review = research_commands.add_parser("review")
+    review.add_argument("hypothesis_id")
+    trace = research_commands.add_parser("trace")
+    trace.add_argument("research_id")
     return parser
 
 
@@ -201,6 +223,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _policy_command(args, config, session)
         if args.command in {"company", "fundamentals", "filings", "exposures"}:
             return _company_command(args, session)
+        if args.command == "research":
+            return _research_command(args, config, session)
         telemetry = measure_storage(session)
         print(
             json.dumps(
@@ -916,6 +940,127 @@ def _filing_dict(item: Filing) -> dict[str, object]:
         "evidence_ids": item.source_evidence_ids,
         "parser_version": item.parser_version,
         "restates_filing_id": item.restates_filing_id,
+    }
+
+
+def _research_command(args: argparse.Namespace, config: AppConfig, session: Session) -> int:
+    provider = _research_provider(config)
+    service = ResearchService(session, provider)
+    repository = SqlResearchRepository(session)
+    if args.research_command == "inspect-context":
+        context = repository.get_context(args.context_id)
+        if context is None:
+            print(json.dumps({"error": "research context not found"}))
+            return 1
+        print(json.dumps(_context_dict(context), ensure_ascii=False, indent=2))
+        return 0
+    if args.research_command == "trace":
+        trace = repository.get_trace(args.research_id)
+        if trace is None:
+            print(json.dumps({"error": "research trace not found"}))
+            return 1
+        print(
+            json.dumps(
+                {
+                    "trace_id": trace.trace_id,
+                    "manifest_id": trace.manifest_id,
+                    "provider_call_id": trace.provider_call_id,
+                    "claim_ids": trace.claim_ids,
+                    "hypothesis_id": trace.hypothesis_id,
+                    "reviewer_id": trace.reviewer_id,
+                    "validation_state": trace.validation_state,
+                    "accepted": trace.accepted,
+                    "created_at": trace.created_at.isoformat(),
+                },
+                indent=2,
+            )
+        )
+        return 0
+    if args.research_command == "review":
+        hypothesis = repository.get_hypothesis(args.hypothesis_id)
+        if hypothesis is None:
+            print(json.dumps({"error": "research hypothesis not found"}))
+            return 1
+        context = repository.context_for_hypothesis(hypothesis.hypothesis_id)
+        if context is None:
+            print(json.dumps({"error": "hypothesis research context not found"}))
+            return 1
+        result = service.review(hypothesis, context)
+        print(
+            json.dumps(
+                {
+                    "reviewer_id": result.reviewer_id,
+                    "accepted": result.accepted,
+                    "issues": result.issues,
+                    "alternative_explanations": result.alternative_explanations,
+                },
+                indent=2,
+            )
+        )
+        return int(not result.accepted)
+    cutoff = _parse_timestamp(args.at)
+    context = service.build_context(args.company_id, cutoff)
+    if args.anonymize:
+        anonymized = anonymize_context(context)
+        context = anonymized.context
+        repository.add_context(context)
+        repository.add_anonymization_mapping(
+            AnonymizationMapping(context.research_context_id, anonymized.mapping, datetime.now(UTC))
+        )
+        session.commit()
+    if args.research_command == "build-context":
+        print(json.dumps(_context_dict(context), ensure_ascii=False, indent=2))
+        return 0
+    hypothesis, trace = service.hypothesize(context)
+    print(
+        json.dumps(
+            {
+                "hypothesis_id": hypothesis.hypothesis_id,
+                "status": hypothesis.status.value,
+                "trace_id": trace.trace_id,
+                "accepted": trace.accepted,
+            },
+            indent=2,
+        )
+    )
+    return 0
+
+
+def _research_provider(config: AppConfig) -> ResearchProvider:
+    definition = config.research_provider
+    if definition.provider == "mock":
+        return MockProvider()
+    if not config.runtime_permissions.network_access:
+        raise GovernanceViolation("external research provider requires host-granted network_access")
+    endpoint = os.environ.get(definition.endpoint_env, "")
+    if not endpoint:
+        raise GovernanceViolation("external research provider endpoint is not configured")
+    return JsonHttpProvider(
+        endpoint,
+        definition.model,
+        os.environ.get(definition.authorization_env),
+    )
+
+
+def _context_dict(context: object) -> dict[str, object]:
+    from market_evolver.research.schemas import ResearchContext
+
+    assert isinstance(context, ResearchContext)
+    return {
+        "research_context_id": context.research_context_id,
+        "cutoff": context.cutoff.isoformat(),
+        "subject_id": context.subject_id,
+        "anonymized": context.anonymized,
+        "items": [
+            {
+                "kind": item.kind,
+                "provenance_id": item.provenance_id,
+                "first_observed_at": item.first_observed_at.isoformat(),
+                "evidence_ids": item.evidence_ids,
+                "text": item.text,
+            }
+            for item in context.items
+        ],
     }
 
 

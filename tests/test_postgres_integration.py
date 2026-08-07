@@ -39,6 +39,10 @@ from market_evolver.news.schemas import (
     ExtractionStatus,
     NewsItem,
 )
+from market_evolver.research.providers import MockProvider
+from market_evolver.research.repositories import SqlResearchRepository
+from market_evolver.research.schemas import ContextItem, ResearchContext
+from market_evolver.research.service import ResearchService
 from market_evolver.schemas import Evidence, Source, SourceKind, TrustLevel
 from market_evolver.sources.registry import TrustClass
 from market_evolver.storage.models import ArtifactModel
@@ -71,9 +75,9 @@ def migrated_engine(postgres_url: str):
         os.environ["MARKET_EVOLVER_DATABASE_URL"] = previous
 
 
-def test_migrations_reach_0007(migrated_engine) -> None:
+def test_migrations_reach_0008(migrated_engine) -> None:
     with migrated_engine.connect() as connection:
-        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0007"
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0008"
 
 
 def test_append_only_update_and_delete_are_rejected(migrated_engine) -> None:
@@ -374,4 +378,44 @@ def test_company_history_restatement_and_append_only(migrated_engine) -> None:
         connection.execute(
             text("UPDATE companies SET legal_name = 'mutated' WHERE company_version_id = :id"),
             {"id": company.company_version_id},
+        )
+
+
+def test_research_context_trace_reviewer_replay_and_append_only(migrated_engine) -> None:
+    now = datetime.now(UTC)
+    cutoff = now - timedelta(seconds=1)
+    token = uuid4().hex
+    evidence_id = f"integration-evidence:{token}"
+    context = ResearchContext(
+        cutoff,
+        f"integration.company.{token}",
+        (
+            ContextItem(
+                "evidence",
+                evidence_id,
+                cutoff,
+                "Integration evidence reports a measurable observation.",
+                (evidence_id,),
+            ),
+        ),
+    )
+    provider = MockProvider(clock=lambda: now)
+    with Session(migrated_engine) as session:
+        service = ResearchService(session, provider)
+        hypothesis, trace = service.hypothesize(context)
+        review = service.review(hypothesis, context)
+        repository = SqlResearchRepository(session)
+        assert repository.get_context(context.research_context_id) == context
+        assert repository.get_hypothesis(hypothesis.hypothesis_id, cutoff) is None
+        assert repository.get_hypothesis(hypothesis.hypothesis_id, now) == hypothesis
+        assert repository.get_trace(trace.trace_id) == trace
+        assert review.hypothesis_id == hypothesis.hypothesis_id
+
+    with pytest.raises(DBAPIError), migrated_engine.begin() as connection:
+        connection.execute(
+            text(
+                "UPDATE research_contexts SET subject_id = 'mutated' "
+                "WHERE research_context_id = :id"
+            ),
+            {"id": context.research_context_id},
         )

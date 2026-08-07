@@ -9,10 +9,12 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from market_evolver.storage.models import (
+    AnonymizationMappingModel,
     ArtifactModel,
     CanonicalEventModel,
     CompanyExposureModel,
     CompanyModel,
+    ContextManifestModel,
     DerivedFundamentalModel,
     EventMechanismLinkModel,
     EventModel,
@@ -37,8 +39,14 @@ from market_evolver.storage.models import (
     NewsEntityModel,
     NewsItemModel,
     NormalizedObservationModel,
+    ProviderCallModel,
     RawIngestionModel,
+    ResearchClaimModel,
+    ResearchContextModel,
     ResearchDecisionModel,
+    ResearchHypothesisModel,
+    ResearchReviewModel,
+    ResearchTraceModel,
     SourceModel,
 )
 
@@ -105,6 +113,14 @@ def measure_storage(session: Session) -> StorageTelemetry:
             FundamentalModel,
             DerivedFundamentalModel,
             CompanyExposureModel,
+            ResearchContextModel,
+            ContextManifestModel,
+            ProviderCallModel,
+            ResearchClaimModel,
+            ResearchHypothesisModel,
+            ResearchReviewModel,
+            ResearchTraceModel,
+            AnonymizationMappingModel,
         )
     }
     raw_bytes = int(
