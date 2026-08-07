@@ -97,3 +97,21 @@ The registry enums and validation also accommodate future official sources such
 as the Israel Securities Authority, Ministry of Finance, Knesset, and
 Competition Authority, plus separately tiered news providers and untrusted
 social platforms. Adding metadata never authorizes ingestion or execution.
+
+## SEC EDGAR (`us.sec.edgar`)
+
+- **Authority:** official primary; U.S. Securities and Exchange Commission.
+- **Status:** enabled narrow connector for NICE, Elbit Systems, Teva, and ICL.
+- **Endpoints:** official submissions and XBRL company-facts JSON APIs.
+- **Expected cadence:** event-driven as filings are accepted.
+- **Timestamp semantics:** SEC `filingDate` is publisher metadata;
+  MarketEvolver's local `first_observed_at` independently controls visibility.
+  Report period dates describe the filing and never imply prior availability.
+- **Revision behavior:** amended filings have distinct accession numbers/forms;
+  filing and observation records link restatements without overwriting originals.
+- **Access:** network permission and an operator-supplied SEC-compliant contact
+  `User-Agent` are required. Responses are size-bounded and must enter immutable
+  artifact storage before parsing in a production ingestion run.
+- **Known limitations:** company facts may contain multiple contexts, dimensions,
+  custom taxonomy extensions, and amended duplicates. Version 0.8 parses only a
+  small `us-gaap` allowlist and does not perform full XBRL reconciliation.

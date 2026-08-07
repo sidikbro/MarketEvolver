@@ -26,6 +26,11 @@ The seed covers:
 - direction-neutral mechanisms such as currency translation, import cost,
   financing cost, risk premium, defense procurement, and tourism demand.
 
+The separate v0.8 company seed adds ten issuer entities and point-in-time links
+to their curated sectors, TASE, and Israel. Company identity and reported
+fundamentals remain in dedicated tables; graph edges reference the stable
+company entity IDs rather than copying accounting facts.
+
 Taxonomy uses explicit `child_of` relationships. Other typed relationships
 include `belongs_to`, `regulated_by`, `listed_on`, `operates_in`, `contains`,
 `affects`, and `leads_to`. Edges are never inferred merely from similar names.
@@ -108,7 +113,7 @@ storage and observatory commands.
 
 ## Known limitations
 
-- The seed is intentionally small and includes no real company universe.
+- The company seed is intentionally small and is not a complete security master.
 - Curated seed provenance identifies the MarketEvolver release, not a full set
   of external legal citations.
 - Alias matching is deterministic and exact after normalization; fuzzy entity

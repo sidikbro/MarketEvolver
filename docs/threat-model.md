@@ -51,6 +51,12 @@ configuration.
 | Missing expectations imply surprise | Expectation status defaults to and remains `unknown` |
 | Policy channel becomes market advice | Mechanism mappings are candidate, confidence-scored, and direction-neutral |
 | Lifecycle state changes without audit | Every explicit transition is an immutable, ordered record with rationale and evidence |
+| Future filing or restatement leaks backward | Filing and fact visibility use local first observation; amendments append explicit links |
+| Ticker reuse or history loss | Company and listing versions have validity intervals and stable company IDs |
+| Currency/unit mismatch corrupts ratios | Derived metrics require compatible period, currency, and units and retain every input ID |
+| Vague prose becomes a quantitative exposure | Numeric exposures require explicit evidence, value, and unit; no prose estimation |
+| Filing bytes are replaced after parsing | Filing records reference verified content-addressed, immutable raw artifacts |
+| SEC identity or endpoint is abused | CIK allowlist, official HTTPS hosts, response-size bounds, and operator contact User-Agent |
 | Database downgrade or misdirection | Explicit PostgreSQL URL, mandatory configuration, TLS default, versioned Alembic migration |
 | Mutation through ORM or direct SQL | ORM hooks fail and PostgreSQL triggers reject updates/deletes; production roles remain least-privilege |
 | Prompt injection in news/social text | Content is data, not instructions; labs expose evidence only |
@@ -125,3 +131,12 @@ corrected, delayed, challenged, or partially implemented. The BOI interest API
 is a current snapshot without explicit revision history or release timestamp.
 Government portal contracts can change, and deterministic keyword extraction
 does not provide legal interpretation.
+
+Company seed data can become stale through ticker changes, delistings, mergers,
+or classification changes. It is curated rather than a complete security master
+and must be revised by appending versions. SEC company facts may contain
+amendments, issuer extensions, dimensions, and multiple contexts that a narrow
+allowlist cannot fully reconcile. TASE/MAYA remains disabled until its access,
+publication-time, and correction semantics are reviewed. Derived values are
+mechanical transformations of compatible observations, not assessments of
+quality, comparability, valuation, or future performance.

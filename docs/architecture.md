@@ -47,6 +47,9 @@ Israel market ontology on top of the evidence and event layers.
 14. **Government Lab** records versioned official actions and append-only,
     evidence-backed lifecycle transitions without converting policy text into
     canonical market events automatically.
+15. **Company fundamentals** versions company identity and listings, retains
+    immutable filing artifacts, and stores reported facts, restatements,
+    evidence-backed exposures, and deterministic derived metrics.
 
 ```text
 fetch -> local first_observed_at + SHA-256 -> immutable raw artifact + receipt
@@ -196,6 +199,26 @@ The enabled BOI policy connector reuses raw-first ingestion for the official
 current-interest JSON endpoint. Other Israeli government and regulator sources
 remain disabled until stable contracts are reviewed. Candidate mechanism
 mappings are direction-neutral and cannot modify knowledge-graph facts.
+
+## Company universe and fundamentals
+
+Alembic revision `0007` adds company versions, filings, fundamental
+observations, derived fundamentals, and company exposures. All five tables are
+append-only in both SQLAlchemy and PostgreSQL. Company, filing, fact, and
+exposure queries filter on local observation time; company and exposure queries
+also apply their declared validity intervals.
+
+Restatements create a new filing and fact linked to the earlier immutable
+records. A cutoff before the amendment returns the original fact. A cutoff
+afterward returns the restatement as current-at-cutoff without deleting the
+original. Deterministic derived metrics retain exact input observation IDs and a
+formula version, and require compatible period, currency, and unit inputs.
+
+The initial company seed links ten Israeli issuers to existing sector, exchange,
+and geography entities. The narrow SEC EDGAR adapter supports four reviewed
+dual-listed CIKs through official JSON endpoints. It does not grant network
+permission or bypass the raw-before-parse ingestion boundary. TASE/MAYA remains
+disabled pending contract review.
 
 ## Governance
 
