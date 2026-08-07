@@ -1,8 +1,8 @@
 # MarketEvolver
 
-MarketEvolver is a governed financial-market research laboratory. Version 0.4
-adds an Event Observatory that deterministically converts trusted observations
-into immutable, point-in-time canonical market events.
+MarketEvolver is a governed financial-market research laboratory. Version 0.5
+adds an immutable, point-in-time Israel Market Knowledge Graph for resolving
+entities and tracing evidence-backed event transmission mechanisms.
 
 This repository intentionally contains **no trading bot**, broker integration,
 order placement, leverage, options, or real-money execution capability.
@@ -28,6 +28,11 @@ market-evolver event list
 market-evolver event show <event-id>
 market-evolver event replay --at 2025-01-02T12:00:00+00:00
 market-evolver event report
+market-evolver entity seed
+market-evolver entity list --at 2025-01-02T12:00:00+00:00
+market-evolver entity resolve "בנק ישראל" --at 2025-01-02T12:00:00+00:00
+market-evolver graph neighbors country.israel --at 2025-01-02T12:00:00+00:00
+market-evolver graph trace-event <event-id> --at 2025-01-02T12:00:00+00:00
 ```
 
 External ingestion also requires `network_access = true` in trusted runtime
@@ -35,4 +40,5 @@ configuration. CBS and TASE/MAYA are registered but intentionally disabled.
 
 See [Architecture](docs/architecture.md), [Threat model](docs/threat-model.md),
 [Data sources](docs/data-sources.md), and
-[Event Observatory](docs/event-observatory.md).
+[Event Observatory](docs/event-observatory.md), and
+[Knowledge Graph](docs/knowledge-graph.md).

@@ -8,8 +8,8 @@ real-money abstractions. A `ResearchDecision` is an epistemic record whose
 strongest outcome is `accept_for_research`; it is not an execution command.
 
 PostgreSQL is the authoritative metadata store; raw bytes live behind an
-immutable artifact-store interface. Version 0.3 adds a registry of external
-authorities and a deliberately narrow official-data ingestion path.
+immutable artifact-store interface. Version 0.5 adds a deliberately compact
+Israel market ontology on top of the evidence and event layers.
 
 ## Layers
 
@@ -38,6 +38,9 @@ authorities and a deliberately narrow official-data ingestion path.
 11. **Event Observatory** applies deterministic rules to trusted normalized
     observations. Canonical event versions, support links, lifecycle transitions,
     and causal-mechanism links are all append-only.
+12. **Knowledge Graph** stores versioned entities, aliases, taxonomy edges,
+    relationships, and exposures. Traversal is deterministic, cutoff-aware, and
+    returns candidate mechanisms with provenance rather than forecasts.
 
 ```text
 fetch -> local first_observed_at + SHA-256 -> immutable raw artifact + receipt
@@ -77,8 +80,14 @@ potentially hostile text.
 
 Repository insertion checks every parent identifier before accepting a derived
 record. SQLAlchemy hooks reject update and delete operations for artifacts and
-all provenance records. This is application-level immutability; production
-database roles should also receive INSERT/SELECT-only privileges.
+all provenance records. Revision `0004` also installs PostgreSQL triggers that
+reject `UPDATE` and `DELETE` on append-only provenance and graph tables.
+
+The application role must not own these tables and should receive only the
+minimum `SELECT`/`INSERT` privileges. Exceptional maintenance must run as the
+migration owner in a reviewed transaction that explicitly disables the exact
+table trigger, performs and audits the repair, and re-enables it before commit.
+There is no application-session bypass flag.
 
 ## Persistence and migration
 
@@ -130,6 +139,32 @@ The initial extractor supports BOI USD/EUR representative-rate updates,
 rate-movement events, and unusual moves at a deterministic one-percent
 threshold. `boi_policy_event` is reserved as a typed placeholder; it emits
 nothing until an official policy dataset is ingested.
+
+## Israel Market Knowledge Graph
+
+Alembic revision `0004` adds versioned entity, alias, relationship, and exposure
+tables. A logical object keeps a stable ID while every correction creates a new
+version with its own validity interval, local observation time, and provenance.
+Queries require an aware cutoff and select only versions both observed and valid
+at that time. Future corrections therefore cannot alter past graph answers.
+
+The deterministic seed includes Israel, the Bank of Israel, ILS, USD, EUR,
+USD/ILS, TASE, major sector taxonomy nodes, and the causal-mechanism registry.
+It deliberately contains no guessed company fundamentals or quantitative
+exposures. Hebrew, English, abbreviations, and external identifiers are stored
+as versioned aliases; ambiguous matches return candidates rather than silently
+choosing one.
+
+Event tracing begins with the immutable event version and its reviewed mechanism
+links, then follows versioned relationships to a bounded depth. Every returned
+path identifies the exact entity and relationship versions, evidence provenance,
+combined confidence, and validated cutoff. It is a causal research candidate,
+not a prediction or investment recommendation.
+
+PostgreSQL remains the graph system of record. The current bounded traversals
+fit relational joins and keep bitemporal enforcement close to the provenance
+tables; a separate graph database would add synchronization and historical-view
+risks without a demonstrated workload need.
 
 ## Governance
 

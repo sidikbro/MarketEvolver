@@ -33,9 +33,14 @@ configuration.
 | Similar wording causes false event merge | Deduplication uses source-specific semantic keys and material fingerprints, never text similarity |
 | Event appears before its evidence | Persistence rejects events, transitions, and mechanism links that predate supporting evidence |
 | Causal link is mistaken for an investment instruction | Mechanism registry is direction-neutral and rejects BUY/SELL semantics |
+| Future graph knowledge leaks into replay | Every entity, alias, edge, and exposure is filtered by local observation and validity interval |
+| Alias collision silently links the wrong entity | Resolution returns all deterministic candidates and marks ambiguity |
+| Guessed exposure becomes quantitative fact | Seed data is qualitative; numeric exposure requires an explicit value, unit, and provenance |
+| Graph traversal obscures provenance | Paths retain exact object versions, event evidence, edge provenance, cutoff, and confidence |
+| Graph cycles or path explosion | Traversal is deterministic, cycle-aware, and bounded to a small depth |
 | Lifecycle state changes without audit | Every explicit transition is an immutable, ordered record with rationale and evidence |
 | Database downgrade or misdirection | Explicit PostgreSQL URL, mandatory configuration, TLS default, versioned Alembic migration |
-| Mutation through ORM | Update/delete hooks fail; production roles should also deny UPDATE/DELETE |
+| Mutation through ORM or direct SQL | ORM hooks fail and PostgreSQL triggers reject updates/deletes; production roles remain least-privilege |
 | Prompt injection in news/social text | Content is data, not instructions; labs expose evidence only |
 | Untrusted content causing a trade | No execution types or adapters; unsafe config fails closed |
 | Model self-granting capabilities | Recommendations and `RuntimePermissions` are separate types/planes |
@@ -80,3 +85,17 @@ The one-percent unusual-move threshold is an observatory classification, not a
 prediction, risk limit, or recommendation. Mechanism links express plausible
 transmission channels and carry confidence, horizon, evidence, and review state;
 they do not assert asset-price direction.
+
+The knowledge graph is a curated research ontology, not a complete map of the
+Israeli market. Seed relationships and qualitative exposures carry explicit
+seed provenance but have not been independently reconciled with every official
+registry. No TASE companies or company-level fundamentals are seeded. Alias
+resolution is exact after Unicode normalization, not fuzzy, and ambiguity
+requires caller review.
+
+Application and database immutability cannot stop a PostgreSQL superuser,
+table owner, or storage administrator. Production deployment must separate the
+application role from the migration owner, audit DDL and trigger changes, and
+test restore procedures. The database-trigger behavior is validated by rendered
+migration SQL and should also be exercised against the deployment's exact
+PostgreSQL version before release.
