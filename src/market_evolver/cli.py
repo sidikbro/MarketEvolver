@@ -107,6 +107,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             state = "enabled" if source.enabled else "disabled"
             print(f"{source.source_id}\t{state}\t{source.name}\t{source.ingestion_method.value}")
         return 0
+    if args.command == "news" and args.news_command == "source-list":
+        return _news_source_list()
 
     config = load_config(args.config)
     engine = create_postgres_engine(config.database)
@@ -421,23 +423,7 @@ def _graph_command(args: argparse.Namespace, session: Session) -> int:
 
 def _news_command(args: argparse.Namespace, config: AppConfig, session: Session) -> int:
     if args.news_command == "source-list":
-        definitions = [item for item in DEFAULT_REGISTRY.list() if item.source_type.value == "news"]
-        print(
-            json.dumps(
-                [
-                    {
-                        "source_id": item.source_id,
-                        "name": item.name,
-                        "trust_class": item.trust_class.value,
-                        "enabled": item.enabled,
-                        "languages": item.language,
-                    }
-                    for item in definitions
-                ],
-                indent=2,
-            )
-        )
-        return 0
+        return _news_source_list()
     if args.news_command == "ingest":
         if not config.runtime_permissions.network_access:
             raise GovernanceViolation("news ingestion requires host-granted network_access")
@@ -499,6 +485,26 @@ def _news_command(args: argparse.Namespace, config: AppConfig, session: Session)
         json.dumps(
             [_news_dict(item) for item in repository.quarantined(cutoff)],
             ensure_ascii=False,
+            indent=2,
+        )
+    )
+    return 0
+
+
+def _news_source_list() -> int:
+    definitions = [item for item in DEFAULT_REGISTRY.list() if item.source_type.value == "news"]
+    print(
+        json.dumps(
+            [
+                {
+                    "source_id": item.source_id,
+                    "name": item.name,
+                    "trust_class": item.trust_class.value,
+                    "enabled": item.enabled,
+                    "languages": item.language,
+                }
+                for item in definitions
+            ],
             indent=2,
         )
     )

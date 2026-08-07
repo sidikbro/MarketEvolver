@@ -73,6 +73,13 @@ class CliTests(unittest.TestCase):
             "news:sha256:x",
         )
 
+    def test_news_source_list_does_not_require_database_or_network(self) -> None:
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            result = main(["news", "source-list"])
+        self.assertEqual(result, 0)
+        self.assertIn('"source_id": "uk.bbc.business"', output.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()
