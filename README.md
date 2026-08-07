@@ -1,8 +1,8 @@
 # MarketEvolver
 
-MarketEvolver is a governed financial-market research laboratory. Version 0.3
-adds a validated source registry and the first narrow official-data ingestion
-path for Bank of Israel representative exchange rates.
+MarketEvolver is a governed financial-market research laboratory. Version 0.4
+adds an Event Observatory that deterministically converts trusted observations
+into immutable, point-in-time canonical market events.
 
 This repository intentionally contains **no trading bot**, broker integration,
 order placement, leverage, options, or real-money execution capability.
@@ -24,10 +24,15 @@ market-evolver source list
 market-evolver ingest boi --dataset representative-exchange-rates
 market-evolver ingest-status
 market-evolver storage-telemetry
+market-evolver event list
+market-evolver event show <event-id>
+market-evolver event replay --at 2025-01-02T12:00:00+00:00
+market-evolver event report
 ```
 
 External ingestion also requires `network_access = true` in trusted runtime
 configuration. CBS and TASE/MAYA are registered but intentionally disabled.
 
 See [Architecture](docs/architecture.md), [Threat model](docs/threat-model.md),
-and [Data sources](docs/data-sources.md).
+[Data sources](docs/data-sources.md), and
+[Event Observatory](docs/event-observatory.md).

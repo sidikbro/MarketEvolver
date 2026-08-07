@@ -29,6 +29,11 @@ configuration.
 | Source silently changes response type | Registry allowlists expected media types; mismatch fails |
 | Historical API data mistaken for historical availability | Period/publication/effective times remain separate from local first observation |
 | Partial or failed ingestion becomes invisible | Every run has a durable success/failure manifest and bounded error summary |
+| Later revision rewrites historical belief | Revisions are new immutable event versions; replay filters versions and transitions by cutoff |
+| Similar wording causes false event merge | Deduplication uses source-specific semantic keys and material fingerprints, never text similarity |
+| Event appears before its evidence | Persistence rejects events, transitions, and mechanism links that predate supporting evidence |
+| Causal link is mistaken for an investment instruction | Mechanism registry is direction-neutral and rejects BUY/SELL semantics |
+| Lifecycle state changes without audit | Every explicit transition is an immutable, ordered record with rationale and evidence |
 | Database downgrade or misdirection | Explicit PostgreSQL URL, mandatory configuration, TLS default, versioned Alembic migration |
 | Mutation through ORM | Update/delete hooks fail; production roles should also deny UPDATE/DELETE |
 | Prompt injection in news/social text | Content is data, not instructions; labs expose evidence only |
@@ -67,3 +72,11 @@ However, v0.3 does not yet enforce response-size limits, certificate pinning, or
 semantic reconciliation against the SDMX series database. The current-rates API
 also lacks an explicit revision history; its `lastUpdate` must not substitute
 for MarketEvolver's local first-observed time.
+
+The Event Observatory is rule-based and therefore only as complete as its
+published rules and registries. It currently recognizes USD and EUR BOI rates;
+unsupported currencies remain evidence but do not become canonical events.
+The one-percent unusual-move threshold is an observatory classification, not a
+prediction, risk limit, or recommendation. Mechanism links express plausible
+transmission channels and carry confidence, horizon, evidence, and review state;
+they do not assert asset-price direction.

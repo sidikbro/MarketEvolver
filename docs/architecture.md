@@ -35,10 +35,14 @@ authorities and a deliberately narrow official-data ingestion path.
    geography, timezone, ingestion method, enabled state, and revision caveats.
 10. **Ingestion runners** enforce the sequence below and record every attempt in
     an operational manifest. Connectors cannot parse before raw persistence.
+11. **Event Observatory** applies deterministic rules to trusted normalized
+    observations. Canonical event versions, support links, lifecycle transitions,
+    and causal-mechanism links are all append-only.
 
 ```text
 fetch -> local first_observed_at + SHA-256 -> immutable raw artifact + receipt
       -> normalize -> parse -> Source + NormalizedObservation -> Evidence
+                                      -> rule extraction -> CanonicalEvent version
                                                                |
                                                                no execution edge
 
@@ -107,6 +111,25 @@ Each run manifest records identity, timestamps, outcome, item and duplicate
 counts, bytes, new artifacts, parser version, and a bounded error summary.
 Telemetry exposes measured raw bytes, table counts, downloaded bytes per day,
 and observation growth per day. It performs no forecasting.
+
+## Event Observatory
+
+Alembic revision `0003` adds canonical events, event support, ordered lifecycle
+transitions, and direction-neutral mechanism links. A canonical event contains
+its material fingerprint and a source-specific semantic deduplication key.
+Exact material matches reuse the event and add provenance support; changed
+material requires a new immutable version with an explicit supersession link.
+
+Replay first filters event versions by local `first_observed_at`, then verifies
+that every supporting evidence record was also visible at the cutoff.
+Transitions are filtered by their own timestamps when deriving status. Thus an
+original event can be confirmed at T1, superseded at T2, and still be queried as
+the system believed it at T1.
+
+The initial extractor supports BOI USD/EUR representative-rate updates,
+rate-movement events, and unusual moves at a deterministic one-percent
+threshold. `boi_policy_event` is reserved as a typed placeholder; it emits
+nothing until an official policy dataset is ingested.
 
 ## Governance
 
