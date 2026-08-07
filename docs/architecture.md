@@ -53,6 +53,9 @@ Israel market ontology on top of the evidence and event layers.
 16. **Research intelligence** assembles immutable cutoff contexts, commits a
     canonical manifest before every provider call, validates structured model
     claims against supplied provenance, and records separate skeptical review.
+17. **Market data and replay** catalogs immutable market observations in
+    PostgreSQL, stores bulk rows in content-addressed Parquet, queries through
+    DuckDB, and binds every historical evaluation to a pre-advance commitment.
 
 ```text
 fetch -> local first_observed_at + SHA-256 -> immutable raw artifact + receipt
@@ -238,6 +241,27 @@ review. Credentials are excluded. The offline mock is default; the generic
 HTTPS adapter additionally requires explicit host network permission. Prompts
 isolate evidence as data, and optional historical-name mappings remain outside
 the model-visible context.
+
+## Historical market data and replay benchmark
+
+Alembic revision `0009` adds asset versions, market partition catalogs,
+observation metadata, corporate actions, trading sessions, replay cases,
+commitments, runs, outcomes, and named/anonymized pairs. PostgreSQL is the
+metadata/provenance system of record. Immutable compressed Parquet holds bulk
+rows, and embedded DuckDB performs analytical reads; no search or graph service
+is introduced.
+
+Point-in-time queries first filter catalog rows by market timestamp and local
+observation cutoff. Parquet hashes are verified before use, and later corrected
+observations cannot replace historical replay. The replay clock refuses to
+advance without a complete immutable research commitment. Matured outcome
+labels retain every input observation ID and are explicitly research metrics,
+not strategy profit or execution results.
+
+The asset seed contains 18 linked instruments and the benchmark contains seven
+versioned case types across seven research modes. Both are deliberately small.
+No external historical-market source is enabled pending a reviewed data and
+licensing contract.
 
 ## Governance
 

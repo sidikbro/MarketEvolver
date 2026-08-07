@@ -63,6 +63,12 @@ configuration.
 | Model recommendation becomes authority | Provider output, accepted claim, canonical event, and runtime permission remain separate planes |
 | Provider secret leaks through trace | Authorization comes from the environment and is excluded from persistence |
 | Historical names reveal memorized outcomes | Optional stable aliases reduce cues without claiming complete leakage prevention |
+| Future or reconstructed prices leak into replay | Catalog queries require market time and local observation time at or before cutoff |
+| Adjusted data erases raw history | Raw and adjusted observations have separate immutable identities and partitions |
+| Parquet file replacement changes outcomes | SHA-256 paths, no-overwrite publication, and verification on every analytical read |
+| Replay hypothesis is changed after seeing outcome | Complete commitment is persisted before clock advance; ORM and database reject mutation |
+| Benchmark constituents leak current membership | Dataset caveat is explicit; v0.10 does not claim historical constituent reconstruction |
+| Delisted assets disappear from evaluation | Asset versions support delisting, while the initial curated benchmark flags survivorship bias |
 | Database downgrade or misdirection | Explicit PostgreSQL URL, mandatory configuration, TLS default, versioned Alembic migration |
 | Mutation through ORM or direct SQL | ORM hooks fail and PostgreSQL triggers reject updates/deletes; production roles remain least-privilege |
 | Prompt injection in news/social text | Content is data, not instructions; labs expose evidence only |
@@ -146,6 +152,15 @@ isolate credentials, and monitor size and rate limits. Historical-name aliases
 cannot remove identifiers implicit in dates, values, sectors, or model weights.
 Skeptical review can identify common defects but cannot prove causal validity or
 that an effect was not already priced in.
+
+Historical market datasets can contain vendor corrections, retroactive
+adjustments, timezone mistakes, missing sessions, stale symbols, and licensing
+constraints. Local observation time prevents known later versions from leaking
+backward but cannot reconstruct a vintage never captured. Content addressing
+detects replacement but not false source data. The curated universe and seven
+cases are subject to selection and survivorship bias; benchmark composition is
+not reconstructed. Outcome returns describe observed price paths and must not be
+presented as realized strategy profit.
 
 Company seed data can become stale through ticker changes, delistings, mergers,
 or classification changes. It is curated rather than a complete security master

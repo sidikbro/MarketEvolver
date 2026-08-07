@@ -1,8 +1,8 @@
 # MarketEvolver
 
-MarketEvolver is a governed financial-market research laboratory. Version 0.9
-adds constrained, provenance-grounded model-assisted research with immutable
-cutoff manifests and separate skeptical review.
+MarketEvolver is a governed financial-market research laboratory. Version 0.10
+adds immutable historical market observations, local Parquet/DuckDB analytics,
+and reproducible research replay benchmarks.
 
 This repository intentionally contains **no trading bot**, broker integration,
 order placement, leverage, options, or real-money execution capability.
@@ -52,6 +52,12 @@ market-evolver research build-context nice --at 2025-01-02T12:00:00+00:00
 market-evolver research hypothesize nice --at 2025-01-02T12:00:00+00:00
 market-evolver research review <hypothesis-id>
 market-evolver research trace <trace-id>
+market-evolver market seed-assets
+market-evolver market ingest observations.json --dataset-version internal/1
+market-evolver replay seed-cases
+market-evolver replay run company_filing --mode event_rules
+market-evolver benchmark run
+market-evolver benchmark report
 ```
 
 External ingestion also requires `network_access = true` in trusted runtime
@@ -61,5 +67,7 @@ See [Architecture](docs/architecture.md), [Threat model](docs/threat-model.md),
 [Data sources](docs/data-sources.md), [Event Observatory](docs/event-observatory.md),
 [Knowledge Graph](docs/knowledge-graph.md), [News Lab](docs/news-lab.md),
 [Government Lab](docs/government-lab.md),
-[Company fundamentals](docs/company-fundamentals.md), and
-[Research intelligence](docs/research-intelligence.md).
+[Company fundamentals](docs/company-fundamentals.md),
+[Research intelligence](docs/research-intelligence.md),
+[Market data](docs/market-data.md), [Historical replay](docs/historical-replay.md), and
+[Replay benchmark](docs/benchmark.md).
