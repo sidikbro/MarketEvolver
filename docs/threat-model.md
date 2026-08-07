@@ -57,6 +57,12 @@ configuration.
 | Vague prose becomes a quantitative exposure | Numeric exposures require explicit evidence, value, and unit; no prose estimation |
 | Filing bytes are replaced after parsing | Filing records reference verified content-addressed, immutable raw artifacts |
 | SEC identity or endpoint is abused | CIK allowlist, official HTTPS hosts, response-size bounds, and operator contact User-Agent |
+| Model fabricates or launders provenance | Post-call gate restricts claim references to evidence in the committed context |
+| Current information enters historical research | Pre-call gate checks every local observation against the aware cutoff |
+| Prompt injection in filings or articles | Evidence is isolated as DATA; action language and malformed structured output fail closed |
+| Model recommendation becomes authority | Provider output, accepted claim, canonical event, and runtime permission remain separate planes |
+| Provider secret leaks through trace | Authorization comes from the environment and is excluded from persistence |
+| Historical names reveal memorized outcomes | Optional stable aliases reduce cues without claiming complete leakage prevention |
 | Database downgrade or misdirection | Explicit PostgreSQL URL, mandatory configuration, TLS default, versioned Alembic migration |
 | Mutation through ORM or direct SQL | ORM hooks fail and PostgreSQL triggers reject updates/deletes; production roles remain least-privilege |
 | Prompt injection in news/social text | Content is data, not instructions; labs expose evidence only |
@@ -131,6 +137,15 @@ corrected, delayed, challenged, or partially implemented. The BOI interest API
 is a current snapshot without explicit revision history or release timestamp.
 Government portal contracts can change, and deterministic keyword extraction
 does not provide legal interpretation.
+
+LLM providers can hallucinate, follow adversarial content, retain submitted
+data, expose pretrained future knowledge, or fail nondeterministically. Schema
+validation and manifests make failures auditable but do not make claims true.
+External deployment must review retention terms, restrict submitted content,
+isolate credentials, and monitor size and rate limits. Historical-name aliases
+cannot remove identifiers implicit in dates, values, sectors, or model weights.
+Skeptical review can identify common defects but cannot prove causal validity or
+that an effect was not already priced in.
 
 Company seed data can become stale through ticker changes, delistings, mergers,
 or classification changes. It is curated rather than a complete security master

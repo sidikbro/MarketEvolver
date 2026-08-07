@@ -50,6 +50,9 @@ Israel market ontology on top of the evidence and event layers.
 15. **Company fundamentals** versions company identity and listings, retains
     immutable filing artifacts, and stores reported facts, restatements,
     evidence-backed exposures, and deterministic derived metrics.
+16. **Research intelligence** assembles immutable cutoff contexts, commits a
+    canonical manifest before every provider call, validates structured model
+    claims against supplied provenance, and records separate skeptical review.
 
 ```text
 fetch -> local first_observed_at + SHA-256 -> immutable raw artifact + receipt
@@ -219,6 +222,22 @@ and geography entities. The narrow SEC EDGAR adapter supports four reviewed
 dual-listed CIKs through official JSON endpoints. It does not grant network
 permission or bypass the raw-before-parse ingestion boundary. TASE/MAYA remains
 disabled pending contract review.
+
+## Constrained research intelligence
+
+Alembic revision `0008` adds append-only research contexts, manifests, provider
+calls, claims, extended hypotheses, reviews, and traces. Provider output must
+parse into typed records, pass temporal and provenance gates, and remains
+proposed until separate review. It has no write path into canonical events,
+runtime permissions, or execution.
+
+The exact context manifest is committed before provider invocation. The trace
+retains provider/model identity, settings, timestamps, token usage when
+available, prompt version, raw-response hash, structured parse, validation, and
+review. Credentials are excluded. The offline mock is default; the generic
+HTTPS adapter additionally requires explicit host network permission. Prompts
+isolate evidence as data, and optional historical-name mappings remain outside
+the model-visible context.
 
 ## Governance
 

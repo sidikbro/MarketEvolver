@@ -1,8 +1,8 @@
 # MarketEvolver
 
-MarketEvolver is a governed financial-market research laboratory. Version 0.8
-adds a curated company universe with immutable filings, fundamentals, explicit
-restatements, exposure versions, and point-in-time replay.
+MarketEvolver is a governed financial-market research laboratory. Version 0.9
+adds constrained, provenance-grounded model-assisted research with immutable
+cutoff manifests and separate skeptical review.
 
 This repository intentionally contains **no trading bot**, broker integration,
 order placement, leverage, options, or real-money execution capability.
@@ -48,6 +48,10 @@ market-evolver company show nice --at 2025-01-02T12:00:00+00:00
 market-evolver fundamentals show nice --at 2025-01-02T12:00:00+00:00
 market-evolver filings list nice
 market-evolver exposures show nice --at 2025-01-02T12:00:00+00:00
+market-evolver research build-context nice --at 2025-01-02T12:00:00+00:00
+market-evolver research hypothesize nice --at 2025-01-02T12:00:00+00:00
+market-evolver research review <hypothesis-id>
+market-evolver research trace <trace-id>
 ```
 
 External ingestion also requires `network_access = true` in trusted runtime
@@ -56,5 +60,6 @@ configuration. CBS and TASE/MAYA are registered but intentionally disabled.
 See [Architecture](docs/architecture.md), [Threat model](docs/threat-model.md),
 [Data sources](docs/data-sources.md), [Event Observatory](docs/event-observatory.md),
 [Knowledge Graph](docs/knowledge-graph.md), [News Lab](docs/news-lab.md),
-[Government Lab](docs/government-lab.md), and
-[Company fundamentals](docs/company-fundamentals.md).
+[Government Lab](docs/government-lab.md),
+[Company fundamentals](docs/company-fundamentals.md), and
+[Research intelligence](docs/research-intelligence.md).
