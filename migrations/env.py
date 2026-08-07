@@ -15,7 +15,10 @@ if config.config_file_name is not None:
 database_url = os.environ.get("MARKET_EVOLVER_DATABASE_URL")
 if not database_url:
     raise RuntimeError("MARKET_EVOLVER_DATABASE_URL is required for migrations")
-config.set_main_option("sqlalchemy.url", database_url)
+# Alembic stores programmatic options in ConfigParser. Literal percent escapes
+# in URL-encoded credentials must be doubled here so ConfigParser returns the
+# original URL to SQLAlchemy instead of treating them as interpolation syntax.
+config.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
 target_metadata = Base.metadata
 
 
