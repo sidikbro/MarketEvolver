@@ -15,13 +15,13 @@ def require_aware_utc(value: datetime, field: str = "timestamp") -> datetime:
 
 
 def validate_source_timeline(
-    *, published_at: datetime, observed_at: datetime, ingested_at: datetime
+    *, published_at: datetime | None, observed_at: datetime, ingested_at: datetime
 ) -> None:
     """Ensure the recorded source lifecycle is causal."""
-    published = require_aware_utc(published_at, "published_at")
     observed = require_aware_utc(observed_at, "observed_at")
     ingested = require_aware_utc(ingested_at, "ingested_at")
-    if published > observed:
+    published = None if published_at is None else require_aware_utc(published_at, "published_at")
+    if published is not None and published > observed:
         raise PointInTimeViolation("published_at cannot be after observed_at")
     if observed > ingested:
         raise PointInTimeViolation("observed_at cannot be after ingested_at")

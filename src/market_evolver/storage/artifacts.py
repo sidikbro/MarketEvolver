@@ -33,6 +33,8 @@ class ArtifactStore(Protocol):
 
     def read(self, artifact: Artifact) -> bytes: ...
 
+    def exists(self, sha256: str) -> bool: ...
+
 
 class LocalArtifactStore:
     """Store bytes under SHA-256 paths, atomically and without replacement."""
@@ -88,6 +90,11 @@ class LocalArtifactStore:
         if len(content) != artifact.size_bytes or self.digest(content) != artifact.sha256:
             raise IntegrityViolation("stored artifact failed integrity verification")
         return content
+
+    def exists(self, sha256: str) -> bool:
+        if len(sha256) != 64 or any(character not in "0123456789abcdef" for character in sha256):
+            raise IntegrityViolation("invalid SHA-256 identifier")
+        return (self.root / self._relative_path(sha256)).exists()
 
     def _verify_existing(self, path: Path, expected_digest: str) -> None:
         if self.digest(path.read_bytes()) != expected_digest:

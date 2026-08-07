@@ -5,7 +5,7 @@ from __future__ import annotations
 import dataclasses
 import hashlib
 import json
-from datetime import datetime
+from datetime import date, datetime
 from enum import Enum
 from typing import Any
 
@@ -18,6 +18,8 @@ def _canonicalize(value: Any) -> Any:
             if field.name != "provenance_id"
         }
     if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, date):
         return value.isoformat()
     if isinstance(value, Enum):
         return value.value

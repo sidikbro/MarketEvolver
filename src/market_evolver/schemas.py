@@ -39,7 +39,7 @@ class Source:
     uri: str
     kind: SourceKind
     publisher: str
-    published_at: datetime
+    published_at: datetime | None
     observed_at: datetime
     ingested_at: datetime
     effective_at: datetime | None = None
@@ -56,9 +56,10 @@ class Source:
             observed_at=self.observed_at,
             ingested_at=self.ingested_at,
         )
-        object.__setattr__(
-            self, "published_at", require_aware_utc(self.published_at, "published_at")
-        )
+        if self.published_at is not None:
+            object.__setattr__(
+                self, "published_at", require_aware_utc(self.published_at, "published_at")
+            )
         object.__setattr__(self, "observed_at", require_aware_utc(self.observed_at, "observed_at"))
         object.__setattr__(self, "ingested_at", require_aware_utc(self.ingested_at, "ingested_at"))
         if self.effective_at is not None:

@@ -119,7 +119,7 @@ class SqlSourceRepository(_SqlRepository[Source]):
             uri=model.uri,
             kind=SourceKind(model.kind),
             publisher=model.publisher,
-            published_at=_utc(model.published_at),
+            published_at=None if model.published_at is None else _utc(model.published_at),
             observed_at=_utc(model.observed_at),
             ingested_at=_utc(model.ingested_at),
             effective_at=None if model.effective_at is None else _utc(model.effective_at),

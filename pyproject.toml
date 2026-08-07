@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "market-evolver"
-version = "0.2.0"
+version = "0.3.0"
 description = "Governed, point-in-time-correct multi-agent market research laboratory"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -15,6 +15,9 @@ dependencies = [
     "pgvector>=0.3,<1",
     "psycopg[binary]>=3.2,<4",
 ]
+
+[project.scripts]
+market-evolver = "market_evolver.cli:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "mypy>=1.11", "ruff>=0.8"]
