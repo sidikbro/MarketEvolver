@@ -1,0 +1,31 @@
+[research]
+timezone = "UTC"
+strict_point_in_time = true
+require_provenance = true
+
+[governance]
+allow_execution = false
+allow_broker_integration = false
+allow_leverage = false
+allow_options = false
+allow_real_money = false
+untrusted_content_may_trigger_execution = false
+
+[runtime_permissions]
+network_access = false
+filesystem_write = false
+subprocess = false
+secrets_access = false
+broker_access = false
+
+[database]
+# Intentionally empty: production startup must receive an explicit PostgreSQL URL
+# through MARKET_EVOLVER_DATABASE_URL.
+url_env = "MARKET_EVOLVER_DATABASE_URL"
+require_tls = true
+
+[artifact_storage]
+# Relative paths are resolved by the application working directory. Override with
+# MARKET_EVOLVER_ARTIFACT_ROOT, e.g. /mnt/marketevolver.
+root = "data"
+root_env = "MARKET_EVOLVER_ARTIFACT_ROOT"
