@@ -15,6 +15,9 @@ from market_evolver.errors import GovernanceViolation
 from market_evolver.ingestion.boi import BankOfIsraelConnector
 from market_evolver.ingestion.repositories import SqlManifestRepository
 from market_evolver.ingestion.runner import IngestionRunner
+from market_evolver.knowledge.repositories import SqlKnowledgeGraph
+from market_evolver.knowledge.schemas import EntityVersion
+from market_evolver.knowledge.seed import seed_knowledge_graph
 from market_evolver.observatory.extraction import BoiEventExtractionPipeline
 from market_evolver.observatory.repositories import (
     SqlCanonicalEventRepository,
@@ -56,6 +59,25 @@ def build_parser() -> argparse.ArgumentParser:
     replay = event_commands.add_parser("replay")
     replay.add_argument("--at", required=True)
     event_commands.add_parser("report")
+    entity = commands.add_parser("entity")
+    entity_commands = entity.add_subparsers(dest="entity_command", required=True)
+    entity_list = entity_commands.add_parser("list")
+    entity_list.add_argument("--at")
+    entity_show = entity_commands.add_parser("show")
+    entity_show.add_argument("entity_id")
+    entity_show.add_argument("--at")
+    entity_resolve = entity_commands.add_parser("resolve")
+    entity_resolve.add_argument("alias")
+    entity_resolve.add_argument("--at")
+    entity_commands.add_parser("seed")
+    graph = commands.add_parser("graph")
+    graph_commands = graph.add_subparsers(dest="graph_command", required=True)
+    trace = graph_commands.add_parser("trace-event")
+    trace.add_argument("event_id")
+    trace.add_argument("--at", required=True)
+    neighbors = graph_commands.add_parser("neighbors")
+    neighbors.add_argument("entity_id")
+    neighbors.add_argument("--at", required=True)
     return parser
 
 
@@ -98,6 +120,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         if args.command == "event":
             return _event_command(args, session)
+        if args.command == "entity":
+            return _entity_command(args, session)
+        if args.command == "graph":
+            return _graph_command(args, session)
         telemetry = measure_storage(session)
         print(
             json.dumps(
@@ -232,8 +258,144 @@ def _parse_timestamp(value: str) -> datetime:
     return parsed.astimezone(UTC)
 
 
+def _optional_timestamp(value: str | None) -> datetime:
+    return datetime.now(UTC) if value is None else _parse_timestamp(value)
+
+
 def _status_value(status: EventStatus | None) -> str | None:
     return None if status is None else status.value
+
+
+def _entity_command(args: argparse.Namespace, session: Session) -> int:
+    graph = SqlKnowledgeGraph(session)
+    if args.entity_command == "seed":
+        entities, relationships, exposures = seed_knowledge_graph(session)
+        session.commit()
+        print(
+            json.dumps(
+                {
+                    "entities_inserted": entities,
+                    "relationships_inserted": relationships,
+                    "exposures_inserted": exposures,
+                }
+            )
+        )
+        return 0
+    cutoff = _optional_timestamp(args.at)
+    if args.entity_command == "list":
+        print(
+            json.dumps(
+                [_knowledge_entity_dict(item) for item in graph.list_entities(cutoff)],
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return 0
+    if args.entity_command == "show":
+        entity = graph.get_entity_at(args.entity_id, cutoff)
+        if entity is None:
+            print(json.dumps({"error": "entity not found", "entity_id": args.entity_id}))
+            return 1
+        print(json.dumps(_knowledge_entity_dict(entity), ensure_ascii=False, indent=2))
+        return 0
+    resolution = graph.resolve_alias(args.alias, cutoff)
+    print(
+        json.dumps(
+            {
+                "status": resolution.status.value,
+                "candidates": [_knowledge_entity_dict(item) for item in resolution.candidates],
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+    return int(resolution.status.value != "resolved")
+
+
+def _graph_command(args: argparse.Namespace, session: Session) -> int:
+    graph = SqlKnowledgeGraph(session)
+    cutoff = _parse_timestamp(args.at)
+    if args.graph_command == "neighbors":
+        relationships = graph.get_relationships(args.entity_id, cutoff)
+        exposures = graph.get_exposures(args.entity_id, cutoff)
+        print(
+            json.dumps(
+                {
+                    "relationships": [
+                        {
+                            "relationship_id": item.relationship_id,
+                            "relation_type": item.relation_type.value,
+                            "source": item.source_entity,
+                            "target": item.target_entity,
+                            "version": item.version,
+                            "confidence": item.confidence,
+                            "provenance": item.provenance,
+                        }
+                        for item in relationships
+                    ],
+                    "exposures": [
+                        {
+                            "exposure_id": item.exposure_id,
+                            "exposure_type": item.exposure_type.value,
+                            "subject": item.subject_entity,
+                            "target": item.target_entity,
+                            "version": item.version,
+                            "strength": item.strength.value,
+                            "provenance": item.source_evidence,
+                        }
+                        for item in exposures
+                    ],
+                },
+                indent=2,
+            )
+        )
+        return 0
+    trace = graph.trace_event(args.event_id, cutoff)
+    print(
+        json.dumps(
+            {
+                "event_id": trace.event_id,
+                "cutoff": trace.cutoff.isoformat(),
+                "direct_entities": trace.direct_entities,
+                "candidate_mechanisms": trace.candidate_mechanisms,
+                "paths": [
+                    {
+                        "entity_ids": item.entity_ids,
+                        "relationship_ids": item.relationship_ids,
+                        "relationship_versions": item.relationship_versions,
+                        "provenance": item.provenance,
+                        "confidence": item.confidence,
+                        "cutoff_validated": item.cutoff_validated,
+                    }
+                    for item in trace.paths
+                ],
+            },
+            indent=2,
+        )
+    )
+    return 0
+
+
+def _knowledge_entity_dict(entity: EntityVersion) -> dict[str, object]:
+    return {
+        "entity_id": entity.entity_id,
+        "entity_version_id": entity.entity_version_id,
+        "canonical_name": entity.canonical_name,
+        "hebrew_name": entity.hebrew_name,
+        "english_name": entity.english_name,
+        "aliases": entity.aliases,
+        "entity_type": entity.entity_type.value,
+        "geography": entity.geography,
+        "identifiers": [
+            {"scheme": item.scheme, "value": item.value} for item in entity.identifiers
+        ],
+        "active_from": entity.active_from.isoformat(),
+        "active_until": (None if entity.active_until is None else entity.active_until.isoformat()),
+        "observed_at": entity.observed_at.isoformat(),
+        "provenance": entity.provenance,
+        "confidence": entity.confidence,
+        "version": entity.version,
+    }
 
 
 if __name__ == "__main__":

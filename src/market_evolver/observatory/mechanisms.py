@@ -57,6 +57,11 @@ DEFAULT_MECHANISM_REGISTRY = MechanismRegistry(
             "Changes in the cost of obtaining or servicing funding.",
         ),
         CausalMechanism(
+            "refinancing_cost",
+            "Refinancing cost",
+            "Changes in the cost of replacing maturing debt or credit facilities.",
+        ),
+        CausalMechanism(
             "credit_demand",
             "Credit demand",
             "Changes in household or business demand for borrowing.",
@@ -75,6 +80,51 @@ DEFAULT_MECHANISM_REGISTRY = MechanismRegistry(
             "consumer_demand",
             "Consumer demand",
             "Changes in household willingness or ability to purchase goods and services.",
+        ),
+        CausalMechanism(
+            "government_spending",
+            "Government spending",
+            "Changes in public-sector purchases, transfers, and investment.",
+        ),
+        CausalMechanism(
+            "defense_procurement",
+            "Defense procurement",
+            "Changes in public procurement of defense goods and services.",
+        ),
+        CausalMechanism(
+            "tourism_demand",
+            "Tourism demand",
+            "Changes in domestic or inbound demand for tourism services.",
+        ),
+        CausalMechanism(
+            "energy_cost",
+            "Energy cost",
+            "Changes in energy input and transportation costs.",
+        ),
+        CausalMechanism(
+            "labor_availability",
+            "Labor availability",
+            "Changes in the available supply of workers or working hours.",
+        ),
+        CausalMechanism(
+            "construction_input_cost",
+            "Construction input cost",
+            "Changes in construction materials, equipment, or labor costs.",
+        ),
+        CausalMechanism(
+            "regulation_cost",
+            "Regulation cost",
+            "Changes in compliance, licensing, or regulatory operating costs.",
+        ),
+        CausalMechanism(
+            "tax_burden",
+            "Tax burden",
+            "Changes in taxes, levies, or mandatory fiscal payments.",
+        ),
+        CausalMechanism(
+            "supply_chain_disruption",
+            "Supply-chain disruption",
+            "Interruptions to sourcing, production, logistics, or delivery.",
         ),
     )
 )

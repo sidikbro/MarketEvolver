@@ -254,6 +254,104 @@ class EventMechanismLinkModel(Base):
     linked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
+class KnowledgeEntityModel(Base):
+    __tablename__ = "knowledge_entities"
+    __table_args__ = (UniqueConstraint("entity_id", "version", name="uq_knowledge_entity_version"),)
+
+    entity_version_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    entity_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    canonical_name: Mapped[str] = mapped_column(String(512), nullable=False)
+    aliases: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    hebrew_name: Mapped[str | None] = mapped_column(String(512))
+    english_name: Mapped[str] = mapped_column(String(512), nullable=False)
+    entity_type: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    geography: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    identifiers: Mapped[list[list[str]]] = mapped_column(JSON, nullable=False)
+    active_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    active_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    provenance: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    confidence: Mapped[float] = mapped_column(nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class KnowledgeAliasModel(Base):
+    __tablename__ = "knowledge_aliases"
+
+    alias_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    alias: Mapped[str] = mapped_column(String(512), nullable=False)
+    normalized_alias: Mapped[str] = mapped_column(String(512), nullable=False, index=True)
+    entity_version_id: Mapped[str] = mapped_column(
+        ForeignKey("knowledge_entities.entity_version_id"), nullable=False, index=True
+    )
+    valid_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    valid_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    provenance: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+
+
+class KnowledgeRelationshipModel(Base):
+    __tablename__ = "knowledge_relationships"
+    __table_args__ = (
+        UniqueConstraint(
+            "source_entity",
+            "target_entity",
+            "relation_type",
+            "version",
+            name="uq_knowledge_relationship_version",
+        ),
+    )
+
+    relationship_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    relation_type: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    source_entity: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    target_entity: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    valid_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    valid_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    confidence: Mapped[float] = mapped_column(nullable=False)
+    provenance: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class KnowledgeExposureModel(Base):
+    __tablename__ = "knowledge_exposures"
+    __table_args__ = (
+        UniqueConstraint(
+            "subject_entity",
+            "target_entity",
+            "exposure_type",
+            "version",
+            name="uq_knowledge_exposure_version",
+        ),
+    )
+
+    exposure_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    exposure_type: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    subject_entity: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    target_entity: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    direction: Mapped[str] = mapped_column(String(24), nullable=False)
+    strength: Mapped[str] = mapped_column(String(16), nullable=False)
+    unit: Mapped[str | None] = mapped_column(String(64))
+    value: Mapped[str | None] = mapped_column(String(128))
+    effective_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    effective_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    confidence: Mapped[float] = mapped_column(nullable=False)
+    source_evidence: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
 def _forbid_mutation(_mapper: Any, _connection: Any, target: Any) -> None:
     raise ImmutableRecordError(
         f"{type(target).__name__} {getattr(target, 'provenance_id', '')} is immutable"
@@ -266,6 +364,10 @@ for _model in (
     EventMechanismLinkModel,
     EventSupportModel,
     EventTransitionModel,
+    KnowledgeAliasModel,
+    KnowledgeEntityModel,
+    KnowledgeExposureModel,
+    KnowledgeRelationshipModel,
     SourceModel,
     EvidenceModel,
     EventModel,

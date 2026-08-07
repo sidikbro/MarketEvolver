@@ -18,6 +18,10 @@ from market_evolver.storage.models import (
     EvidenceModel,
     HypothesisModel,
     IngestionManifestModel,
+    KnowledgeAliasModel,
+    KnowledgeEntityModel,
+    KnowledgeExposureModel,
+    KnowledgeRelationshipModel,
     NormalizedObservationModel,
     RawIngestionModel,
     ResearchDecisionModel,
@@ -56,6 +60,10 @@ def measure_storage(session: Session) -> StorageTelemetry:
             EventSupportModel,
             EventTransitionModel,
             EventMechanismLinkModel,
+            KnowledgeEntityModel,
+            KnowledgeAliasModel,
+            KnowledgeRelationshipModel,
+            KnowledgeExposureModel,
         )
     }
     raw_bytes = int(

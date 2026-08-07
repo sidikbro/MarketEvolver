@@ -27,6 +27,37 @@ class CliTests(unittest.TestCase):
             "2025-01-02T12:00:00+00:00",
         )
 
+    def test_knowledge_graph_commands_are_registered(self) -> None:
+        parser = build_parser()
+        self.assertEqual(
+            parser.parse_args(["entity", "resolve", "בנק ישראל"]).alias,
+            "בנק ישראל",
+        )
+        self.assertEqual(
+            parser.parse_args(
+                [
+                    "graph",
+                    "trace-event",
+                    "canonical-event:sha256:x",
+                    "--at",
+                    "2025-01-02T12:00:00+00:00",
+                ]
+            ).graph_command,
+            "trace-event",
+        )
+        self.assertEqual(
+            parser.parse_args(
+                [
+                    "graph",
+                    "neighbors",
+                    "sector.banks",
+                    "--at",
+                    "2025-01-02T12:00:00+00:00",
+                ]
+            ).entity_id,
+            "sector.banks",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
