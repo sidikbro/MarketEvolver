@@ -58,6 +58,21 @@ class CliTests(unittest.TestCase):
             "sector.banks",
         )
 
+    def test_news_lab_commands_are_registered(self) -> None:
+        parser = build_parser()
+        self.assertEqual(
+            parser.parse_args(["news", "ingest", "bbc-business"]).source,
+            "bbc-business",
+        )
+        self.assertEqual(
+            parser.parse_args(["news", "replay", "--at", "2025-01-02T12:00:00+00:00"]).news_command,
+            "replay",
+        )
+        self.assertEqual(
+            parser.parse_args(["news", "show", "news:sha256:x"]).news_id,
+            "news:sha256:x",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

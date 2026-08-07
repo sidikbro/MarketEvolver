@@ -352,6 +352,108 @@ class KnowledgeExposureModel(Base):
     version: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
+class NewsItemModel(Base):
+    __tablename__ = "news_items"
+
+    news_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    source_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    body: Mapped[str] = mapped_column(String, nullable=False)
+    language: Mapped[str] = mapped_column(String(16), nullable=False)
+    published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    first_observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_modified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    canonical_uri: Mapped[str] = mapped_column(String(2048), nullable=False, index=True)
+    content_hash: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    raw_artifact_sha256: Mapped[str] = mapped_column(ForeignKey("artifacts.sha256"), nullable=False)
+    parser_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    trust_class: Mapped[str] = mapped_column(String(32), nullable=False)
+    evidence_security_class: Mapped[str] = mapped_column(String(32), nullable=False)
+    evidence_id: Mapped[str] = mapped_column(ForeignKey("evidence.provenance_id"), nullable=False)
+    revision_of: Mapped[str | None] = mapped_column(String(96), index=True)
+    extraction_status: Mapped[str] = mapped_column(String(24), nullable=False)
+    quarantine_reason: Mapped[str | None] = mapped_column(String(1024))
+    provenance: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    duplicate_kind: Mapped[str] = mapped_column(String(24), nullable=False)
+    normalized_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+
+
+class NewsEntityModel(Base):
+    __tablename__ = "news_entities"
+
+    news_id: Mapped[str] = mapped_column(ForeignKey("news_items.news_id"), primary_key=True)
+    entity_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    supporting_span: Mapped[str] = mapped_column(String(512), primary_key=True)
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class NewsCandidateModel(Base):
+    __tablename__ = "news_event_candidates"
+
+    candidate_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    news_id: Mapped[str] = mapped_column(ForeignKey("news_items.news_id"), nullable=False)
+    extracted_entities: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    possible_event_type: Mapped[str] = mapped_column(String(128), nullable=False)
+    extraction_method: Mapped[str] = mapped_column(String(128), nullable=False)
+    confidence: Mapped[float] = mapped_column(nullable=False)
+    supporting_spans: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    review_state: Mapped[str] = mapped_column(String(24), nullable=False)
+
+
+class NewsCandidateReviewModel(Base):
+    __tablename__ = "news_candidate_reviews"
+
+    review_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    candidate_id: Mapped[str] = mapped_column(
+        ForeignKey("news_event_candidates.candidate_id"), nullable=False, index=True
+    )
+    state: Mapped[str] = mapped_column(String(24), nullable=False)
+    reviewed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    reviewer: Mapped[str] = mapped_column(String(256), nullable=False)
+    rationale: Mapped[str] = mapped_column(String, nullable=False)
+
+
+class NewsCorroborationModel(Base):
+    __tablename__ = "news_corroborations"
+
+    corroboration_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    candidate_id: Mapped[str] = mapped_column(
+        ForeignKey("news_event_candidates.candidate_id"), nullable=False, index=True
+    )
+    evidence_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    source_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    independence_assumptions: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    timestamp_ordering: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    confidence: Mapped[float] = mapped_column(nullable=False)
+    contradictions: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+
+
+class EvidenceContradictionModel(Base):
+    __tablename__ = "evidence_contradictions"
+
+    contradiction_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    evidence_a: Mapped[str] = mapped_column(ForeignKey("evidence.provenance_id"), nullable=False)
+    evidence_b: Mapped[str] = mapped_column(ForeignKey("evidence.provenance_id"), nullable=False)
+    contradiction_type: Mapped[str] = mapped_column(String(128), nullable=False)
+    detected_by: Mapped[str] = mapped_column(String(128), nullable=False)
+    confidence: Mapped[float] = mapped_column(nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+
+
 def _forbid_mutation(_mapper: Any, _connection: Any, target: Any) -> None:
     raise ImmutableRecordError(
         f"{type(target).__name__} {getattr(target, 'provenance_id', '')} is immutable"
@@ -368,6 +470,12 @@ for _model in (
     KnowledgeEntityModel,
     KnowledgeExposureModel,
     KnowledgeRelationshipModel,
+    NewsCandidateModel,
+    NewsCandidateReviewModel,
+    NewsCorroborationModel,
+    NewsEntityModel,
+    NewsItemModel,
+    EvidenceContradictionModel,
     SourceModel,
     EvidenceModel,
     EventModel,

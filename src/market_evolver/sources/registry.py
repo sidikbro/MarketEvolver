@@ -33,6 +33,16 @@ class IngestionMethod(str, Enum):
     SDMX_API = "sdmx_api"
     DISCLOSURE_API = "disclosure_api"
     FILE_DOWNLOAD = "file_download"
+    RSS_FEED = "rss_feed"
+
+
+class TrustClass(str, Enum):
+    OFFICIAL = "official"
+    PRIMARY_CORPORATE = "primary_corporate"
+    ESTABLISHED_NEWS = "established_news"
+    SPECIALIST_PUBLICATION = "specialist_publication"
+    SOCIAL = "social"
+    ANONYMOUS_OR_UNKNOWN = "anonymous_or_unknown"
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,6 +58,14 @@ class SourceDefinition:
     ingestion_method: IngestionMethod
     enabled: bool
     revision_notes: str
+    trust_class: TrustClass = TrustClass.OFFICIAL
+    language: tuple[str, ...] = ("en",)
+    publisher_identity: str = ""
+    owner_organization: str | None = None
+    machine_readable: bool = True
+    publication_timestamp_semantics: str = "Publisher-supplied timestamp."
+    access_notes: str = "Public endpoint; availability may change."
+    storage_constraints: str = "Internal research retention only."
 
     def __post_init__(self) -> None:
         if fullmatch(r"[a-z0-9]+(?:[.-][a-z0-9]+)*", self.source_id) is None:
@@ -62,6 +80,14 @@ class SourceDefinition:
             raise ValidationError("at least one valid expected content type is required")
         if not self.revision_notes.strip():
             raise ValidationError("source revision behavior must be documented")
+        if not self.language or any(not item.strip() for item in self.language):
+            raise ValidationError("source languages are required")
+        if not (self.publisher_identity or self.name).strip():
+            raise ValidationError("publisher identity is required")
+        if not self.publication_timestamp_semantics.strip():
+            raise ValidationError("publication timestamp semantics are required")
+        if not self.access_notes.strip() or not self.storage_constraints.strip():
+            raise ValidationError("access and storage constraints must be documented")
         try:
             ZoneInfo(self.timezone)
         except ZoneInfoNotFoundError as exc:
@@ -104,6 +130,35 @@ DEFAULT_REGISTRY = SourceRegistry(
             revision_notes=(
                 "Current representative rates may be followed by revised series-database "
                 "values; each observed payload is retained independently."
+            ),
+        ),
+        SourceDefinition(
+            source_id="uk.bbc.business",
+            name="BBC Business",
+            source_type=RegistrySourceType.NEWS,
+            geography="GLOBAL",
+            authority_tier=AuthorityTier.UNTRUSTED,
+            base_uri="https://feeds.bbci.co.uk/news/business/rss.xml",
+            expected_content_types=(
+                "application/rss+xml",
+                "application/xml",
+                "text/xml",
+            ),
+            timezone="Europe/London",
+            ingestion_method=IngestionMethod.RSS_FEED,
+            enabled=True,
+            revision_notes=(
+                "Feed entries may be edited or removed; every changed item is retained as "
+                "a new locally observed revision."
+            ),
+            trust_class=TrustClass.ESTABLISHED_NEWS,
+            language=("en",),
+            publisher_identity="British Broadcasting Corporation",
+            owner_organization="BBC",
+            publication_timestamp_semantics="RSS pubDate supplied by the publisher.",
+            access_notes="Public RSS feed; article pages may have regional access controls.",
+            storage_constraints=(
+                "Retain feed payloads for internal provenance; do not redistribute article text."
             ),
         ),
         SourceDefinition(

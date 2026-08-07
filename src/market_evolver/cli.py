@@ -18,6 +18,10 @@ from market_evolver.ingestion.runner import IngestionRunner
 from market_evolver.knowledge.repositories import SqlKnowledgeGraph
 from market_evolver.knowledge.schemas import EntityVersion
 from market_evolver.knowledge.seed import seed_knowledge_graph
+from market_evolver.news.connectors import BbcBusinessRssConnector
+from market_evolver.news.repositories import SqlNewsRepository
+from market_evolver.news.runner import NewsIngestionRunner
+from market_evolver.news.schemas import NewsItem
 from market_evolver.observatory.extraction import BoiEventExtractionPipeline
 from market_evolver.observatory.repositories import (
     SqlCanonicalEventRepository,
@@ -78,6 +82,21 @@ def build_parser() -> argparse.ArgumentParser:
     neighbors = graph_commands.add_parser("neighbors")
     neighbors.add_argument("entity_id")
     neighbors.add_argument("--at", required=True)
+    news = commands.add_parser("news")
+    news_commands = news.add_subparsers(dest="news_command", required=True)
+    news_commands.add_parser("source-list")
+    news_ingest = news_commands.add_parser("ingest")
+    news_ingest.add_argument("source", choices=("bbc-business",))
+    news_list = news_commands.add_parser("list")
+    news_list.add_argument("--at")
+    news_show = news_commands.add_parser("show")
+    news_show.add_argument("news_id")
+    news_replay = news_commands.add_parser("replay")
+    news_replay.add_argument("--at", required=True)
+    news_candidates = news_commands.add_parser("candidates")
+    news_candidates.add_argument("--at")
+    news_quarantine = news_commands.add_parser("quarantine")
+    news_quarantine.add_argument("--at")
     return parser
 
 
@@ -124,6 +143,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _entity_command(args, session)
         if args.command == "graph":
             return _graph_command(args, session)
+        if args.command == "news":
+            return _news_command(args, config, session)
         telemetry = measure_storage(session)
         print(
             json.dumps(
@@ -138,6 +159,28 @@ def main(argv: Sequence[str] | None = None) -> int:
                         {"day": item.day.isoformat(), "items": item.value}
                         for item in telemetry.item_growth_by_day
                     ],
+                    "news_items_by_day": [
+                        {"day": item.day.isoformat(), "items": item.value}
+                        for item in telemetry.news_items_by_day
+                    ],
+                    "raw_news_bytes_by_day": [
+                        {"day": item.day.isoformat(), "bytes": item.value}
+                        for item in telemetry.raw_news_bytes_by_day
+                    ],
+                    "news_duplicates_by_day": [
+                        {"day": item.day.isoformat(), "items": item.value}
+                        for item in telemetry.news_duplicates_by_day
+                    ],
+                    "news_revisions_by_day": [
+                        {"day": item.day.isoformat(), "items": item.value}
+                        for item in telemetry.news_revisions_by_day
+                    ],
+                    "quarantined_news_by_day": [
+                        {"day": item.day.isoformat(), "items": item.value}
+                        for item in telemetry.quarantined_news_by_day
+                    ],
+                    "news_items_by_source": telemetry.news_items_by_source,
+                    "news_bytes_by_source": telemetry.news_bytes_by_source,
                 },
                 indent=2,
             )
@@ -374,6 +417,114 @@ def _graph_command(args: argparse.Namespace, session: Session) -> int:
         )
     )
     return 0
+
+
+def _news_command(args: argparse.Namespace, config: AppConfig, session: Session) -> int:
+    if args.news_command == "source-list":
+        definitions = [item for item in DEFAULT_REGISTRY.list() if item.source_type.value == "news"]
+        print(
+            json.dumps(
+                [
+                    {
+                        "source_id": item.source_id,
+                        "name": item.name,
+                        "trust_class": item.trust_class.value,
+                        "enabled": item.enabled,
+                        "languages": item.language,
+                    }
+                    for item in definitions
+                ],
+                indent=2,
+            )
+        )
+        return 0
+    if args.news_command == "ingest":
+        if not config.runtime_permissions.network_access:
+            raise GovernanceViolation("news ingestion requires host-granted network_access")
+        inserted, duplicates, quarantined = NewsIngestionRunner(
+            session,
+            LocalArtifactStore(config.artifact_storage.resolve_root()),
+        ).run(BbcBusinessRssConnector())
+        print(
+            json.dumps(
+                {
+                    "inserted": inserted,
+                    "duplicates": duplicates,
+                    "quarantined": quarantined,
+                }
+            )
+        )
+        return int(quarantined > 0)
+    repository = SqlNewsRepository(session)
+    cutoff = _optional_timestamp(getattr(args, "at", None))
+    if args.news_command in {"list", "replay"}:
+        print(
+            json.dumps(
+                [_news_dict(item) for item in repository.get_news_visible_at(cutoff)],
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return 0
+    if args.news_command == "show":
+        item = repository.get(args.news_id)
+        if item is None:
+            print(json.dumps({"error": "news not found", "news_id": args.news_id}))
+            return 1
+        print(json.dumps(_news_dict(item), ensure_ascii=False, indent=2))
+        return 0
+    if args.news_command == "candidates":
+        candidates = repository.get_event_candidates_visible_at(cutoff)
+        print(
+            json.dumps(
+                [
+                    {
+                        "candidate_id": item.candidate_id,
+                        "news_id": item.news_id,
+                        "entities": item.extracted_entities,
+                        "possible_event_type": item.possible_event_type,
+                        "method": item.extraction_method,
+                        "confidence": item.confidence,
+                        "review_state": item.review_state.value,
+                        "created_at": item.created_at.isoformat(),
+                    }
+                    for item in candidates
+                ],
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return 0
+    print(
+        json.dumps(
+            [_news_dict(item) for item in repository.quarantined(cutoff)],
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+    return 0
+
+
+def _news_dict(item: NewsItem) -> dict[str, object]:
+    return {
+        "news_id": item.news_id,
+        "source_id": item.source_id,
+        "title": item.title,
+        "language": item.language,
+        "published_at": item.published_at.isoformat(),
+        "first_observed_at": item.first_observed_at.isoformat(),
+        "updated_at": None if item.updated_at is None else item.updated_at.isoformat(),
+        "canonical_uri": item.canonical_uri,
+        "content_hash": item.content_hash,
+        "raw_artifact_sha256": item.raw_artifact_sha256,
+        "revision_of": item.revision_of,
+        "trust_class": item.trust_class.value,
+        "evidence_security_class": item.evidence_security_class.value,
+        "extraction_status": item.extraction_status.value,
+        "quarantine_reason": item.quarantine_reason,
+        "duplicate_kind": item.duplicate_kind.value,
+        "provenance": item.provenance,
+    }
 
 
 def _knowledge_entity_dict(entity: EntityVersion) -> dict[str, object]:

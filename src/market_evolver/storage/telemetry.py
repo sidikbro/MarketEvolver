@@ -15,6 +15,7 @@ from market_evolver.storage.models import (
     EventModel,
     EventSupportModel,
     EventTransitionModel,
+    EvidenceContradictionModel,
     EvidenceModel,
     HypothesisModel,
     IngestionManifestModel,
@@ -22,6 +23,11 @@ from market_evolver.storage.models import (
     KnowledgeEntityModel,
     KnowledgeExposureModel,
     KnowledgeRelationshipModel,
+    NewsCandidateModel,
+    NewsCandidateReviewModel,
+    NewsCorroborationModel,
+    NewsEntityModel,
+    NewsItemModel,
     NormalizedObservationModel,
     RawIngestionModel,
     ResearchDecisionModel,
@@ -41,6 +47,13 @@ class StorageTelemetry:
     database_record_counts: dict[str, int]
     ingestion_bytes_by_day: tuple[DailyMeasurement, ...]
     item_growth_by_day: tuple[DailyMeasurement, ...]
+    news_items_by_day: tuple[DailyMeasurement, ...] = ()
+    raw_news_bytes_by_day: tuple[DailyMeasurement, ...] = ()
+    news_duplicates_by_day: tuple[DailyMeasurement, ...] = ()
+    news_revisions_by_day: tuple[DailyMeasurement, ...] = ()
+    quarantined_news_by_day: tuple[DailyMeasurement, ...] = ()
+    news_items_by_source: dict[str, int] | None = None
+    news_bytes_by_source: dict[str, int] | None = None
 
 
 def measure_storage(session: Session) -> StorageTelemetry:
@@ -64,6 +77,12 @@ def measure_storage(session: Session) -> StorageTelemetry:
             KnowledgeAliasModel,
             KnowledgeRelationshipModel,
             KnowledgeExposureModel,
+            NewsItemModel,
+            NewsEntityModel,
+            NewsCandidateModel,
+            NewsCandidateReviewModel,
+            NewsCorroborationModel,
+            EvidenceContradictionModel,
         )
     }
     raw_bytes = int(
@@ -85,6 +104,29 @@ def measure_storage(session: Session) -> StorageTelemetry:
         .group_by(func.date(NormalizedObservationModel.first_observed_at))
         .order_by(func.date(NormalizedObservationModel.first_observed_at))
     )
+    news_models = tuple(session.scalars(select(NewsItemModel)))
+    artifact_sizes = {
+        item.sha256: item.size_bytes for item in session.scalars(select(ArtifactModel))
+    }
+    news_by_day: dict[date, int] = {}
+    duplicate_by_day: dict[date, int] = {}
+    revision_by_day: dict[date, int] = {}
+    quarantine_by_day: dict[date, int] = {}
+    source_volume: dict[str, int] = {}
+    source_artifacts: dict[str, set[str]] = {}
+    artifact_days: dict[date, set[str]] = {}
+    for item in news_models:
+        day = item.first_observed_at.date()
+        news_by_day[day] = news_by_day.get(day, 0) + 1
+        source_volume[item.source_id] = source_volume.get(item.source_id, 0) + 1
+        source_artifacts.setdefault(item.source_id, set()).add(item.raw_artifact_sha256)
+        artifact_days.setdefault(day, set()).add(item.raw_artifact_sha256)
+        if item.duplicate_kind in {"reingested", "syndicated"}:
+            duplicate_by_day[day] = duplicate_by_day.get(day, 0) + 1
+        if item.duplicate_kind == "revision":
+            revision_by_day[day] = revision_by_day.get(day, 0) + 1
+        if item.evidence_security_class == "quarantined":
+            quarantine_by_day[day] = quarantine_by_day.get(day, 0) + 1
     return StorageTelemetry(
         raw_artifact_bytes=raw_bytes,
         database_record_counts=counts,
@@ -95,8 +137,27 @@ def measure_storage(session: Session) -> StorageTelemetry:
         item_growth_by_day=tuple(
             DailyMeasurement(date.fromisoformat(str(day)), int(value)) for day, value in growth_rows
         ),
+        news_items_by_day=_measurements(news_by_day),
+        raw_news_bytes_by_day=_measurements(
+            {
+                day: sum(artifact_sizes.get(digest, 0) for digest in digests)
+                for day, digests in artifact_days.items()
+            }
+        ),
+        news_duplicates_by_day=_measurements(duplicate_by_day),
+        news_revisions_by_day=_measurements(revision_by_day),
+        quarantined_news_by_day=_measurements(quarantine_by_day),
+        news_items_by_source=dict(sorted(source_volume.items())),
+        news_bytes_by_source={
+            source_id: sum(artifact_sizes.get(digest, 0) for digest in digests)
+            for source_id, digests in sorted(source_artifacts.items())
+        },
     )
 
 
 def _count(session: Session, model: type) -> int:
     return int(session.scalar(select(func.count()).select_from(model)) or 0)
+
+
+def _measurements(values: dict[date, int]) -> tuple[DailyMeasurement, ...]:
+    return tuple(DailyMeasurement(day, values[day]) for day in sorted(values))

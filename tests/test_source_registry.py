@@ -15,7 +15,7 @@ class SourceRegistryTests(unittest.TestCase):
     def test_initial_official_sources_are_registered(self) -> None:
         self.assertEqual(
             {item.source_id for item in DEFAULT_REGISTRY.list()},
-            {"il.boi", "il.cbs", "il.tase.maya"},
+            {"il.boi", "il.cbs", "il.tase.maya", "uk.bbc.business"},
         )
         self.assertTrue(DEFAULT_REGISTRY.get("il.boi").enabled)
         self.assertFalse(DEFAULT_REGISTRY.get("il.cbs").enabled)
