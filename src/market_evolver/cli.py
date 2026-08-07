@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from pathlib import Path
 
 from sqlalchemy.orm import Session
@@ -14,6 +15,12 @@ from market_evolver.errors import GovernanceViolation
 from market_evolver.ingestion.boi import BankOfIsraelConnector
 from market_evolver.ingestion.repositories import SqlManifestRepository
 from market_evolver.ingestion.runner import IngestionRunner
+from market_evolver.observatory.extraction import BoiEventExtractionPipeline
+from market_evolver.observatory.repositories import (
+    SqlCanonicalEventRepository,
+    observatory_summary,
+)
+from market_evolver.observatory.schemas import CanonicalEvent, EventStatus
 from market_evolver.sources.registry import DEFAULT_REGISTRY
 from market_evolver.storage.artifacts import LocalArtifactStore
 from market_evolver.storage.database import create_postgres_engine
@@ -41,6 +48,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     commands.add_parser("ingest-status")
     commands.add_parser("storage-telemetry")
+    event = commands.add_parser("event")
+    event_commands = event.add_subparsers(dest="event_command", required=True)
+    event_commands.add_parser("list")
+    show = event_commands.add_parser("show")
+    show.add_argument("event_id")
+    replay = event_commands.add_parser("replay")
+    replay.add_argument("--at", required=True)
+    event_commands.add_parser("report")
     return parser
 
 
@@ -81,6 +96,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 )
             )
             return 0
+        if args.command == "event":
+            return _event_command(args, session)
         telemetry = measure_storage(session)
         print(
             json.dumps(
@@ -110,8 +127,113 @@ def _ingest(args: argparse.Namespace, config: AppConfig, session: Session) -> in
         session,
         LocalArtifactStore(config.artifact_storage.resolve_root()),
     ).run(connector, args.dataset)
+    if manifest.status.value == "succeeded":
+        BoiEventExtractionPipeline(session).run_pending()
+        session.commit()
     print(f"{manifest.run_id}\t{manifest.status.value}")
     return int(manifest.status.value != "succeeded")
+
+
+def _event_command(args: argparse.Namespace, session: Session) -> int:
+    repository = SqlCanonicalEventRepository(session)
+    if args.event_command == "show":
+        event = repository.get(args.event_id)
+        if event is None:
+            print(json.dumps({"error": "event not found", "event_id": args.event_id}))
+            return 1
+        current_status = repository.current_status(event.event_id, datetime.now(UTC))
+        print(
+            json.dumps(
+                {
+                    **_event_to_dict(event),
+                    "current_status": (None if current_status is None else current_status.value),
+                    "transitions": [
+                        {
+                            "from": (None if item.from_status is None else item.from_status.value),
+                            "to": item.to_status.value,
+                            "at": item.transitioned_at.isoformat(),
+                            "rationale": item.rationale,
+                        }
+                        for item in repository.transitions(event.event_id)
+                    ],
+                },
+                indent=2,
+            )
+        )
+        return 0
+    if args.event_command == "replay":
+        cutoff = _parse_timestamp(args.at)
+    else:
+        cutoff = datetime.now(UTC)
+    if args.event_command in ("list", "replay"):
+        print(
+            json.dumps(
+                [
+                    {
+                        **_event_to_dict(event),
+                        "status_at_cutoff": _status_value(
+                            repository.current_status(event.event_id, cutoff)
+                        ),
+                    }
+                    for event in repository.get_events_visible_at(cutoff)
+                ],
+                indent=2,
+            )
+        )
+        return 0
+    summary = observatory_summary(session, cutoff)
+    print(
+        json.dumps(
+            {
+                "events_by_source": summary.events_by_source,
+                "events_by_type": summary.events_by_type,
+                "revision_count": summary.revision_count,
+                "entities_referenced": summary.entities_referenced,
+                "mechanisms_referenced": summary.mechanisms_referenced,
+                "coverage_started_at": (
+                    None
+                    if summary.coverage_started_at is None
+                    else summary.coverage_started_at.isoformat()
+                ),
+                "coverage_ended_at": (
+                    None
+                    if summary.coverage_ended_at is None
+                    else summary.coverage_ended_at.isoformat()
+                ),
+            },
+            indent=2,
+        )
+    )
+    return 0
+
+
+def _event_to_dict(event: CanonicalEvent) -> dict[str, object]:
+    return {
+        "event_id": event.event_id,
+        "event_type": event.event_type.value,
+        "source_ids": event.source_ids,
+        "evidence_ids": event.evidence_ids,
+        "first_observed_at": event.first_observed_at.isoformat(),
+        "published_at": (None if event.published_at is None else event.published_at.isoformat()),
+        "effective_at": (None if event.effective_at is None else event.effective_at.isoformat()),
+        "event_status": event.event_status.value,
+        "revision_state": event.revision_state.value,
+        "supersedes_event_id": event.supersedes_event_id,
+        "entities": event.entities,
+        "mechanisms": event.causal_mechanisms,
+        "attributes": dict(event.attributes),
+    }
+
+
+def _parse_timestamp(value: str) -> datetime:
+    parsed = datetime.fromisoformat(value)
+    if parsed.tzinfo is None:
+        raise ValueError("--at timestamp must include a timezone")
+    return parsed.astimezone(UTC)
+
+
+def _status_value(status: EventStatus | None) -> str | None:
+    return None if status is None else status.value
 
 
 if __name__ == "__main__":

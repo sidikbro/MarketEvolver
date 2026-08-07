@@ -167,6 +167,93 @@ class IngestionManifestModel(Base):
     error_summary: Mapped[str | None] = mapped_column(String(2048))
 
 
+class CanonicalEventModel(Base):
+    __tablename__ = "canonical_events"
+    __table_args__ = (
+        UniqueConstraint(
+            "deduplication_key",
+            "material_fingerprint",
+            name="uq_canonical_event_material",
+        ),
+    )
+
+    event_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    event_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    source_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    evidence_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    geography: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    entities: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    sectors: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    affected_asset_classes: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    first_observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    effective_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    event_status: Mapped[str] = mapped_column(String(16), nullable=False)
+    confidence: Mapped[float] = mapped_column(nullable=False)
+    novelty: Mapped[float] = mapped_column(nullable=False)
+    revision_state: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    supersedes_event_id: Mapped[str | None] = mapped_column(ForeignKey("canonical_events.event_id"))
+    causal_mechanisms: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    tags: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    attributes: Mapped[list[list[str]]] = mapped_column(JSON, nullable=False)
+    deduplication_key: Mapped[str] = mapped_column(String(512), nullable=False)
+    material_fingerprint: Mapped[str] = mapped_column(String(96), nullable=False)
+
+
+class EventSupportModel(Base):
+    __tablename__ = "event_support"
+
+    event_id: Mapped[str] = mapped_column(ForeignKey("canonical_events.event_id"), primary_key=True)
+    evidence_id: Mapped[str] = mapped_column(ForeignKey("evidence.provenance_id"), primary_key=True)
+    source_id: Mapped[str] = mapped_column(ForeignKey("sources.provenance_id"), primary_key=True)
+    first_observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+
+
+class EventTransitionModel(Base):
+    __tablename__ = "event_transitions"
+    __table_args__ = (
+        UniqueConstraint(
+            "event_id",
+            "sequence",
+            name="uq_event_transition_sequence",
+        ),
+    )
+
+    transition_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    event_id: Mapped[str] = mapped_column(
+        ForeignKey("canonical_events.event_id"), nullable=False, index=True
+    )
+    from_status: Mapped[str | None] = mapped_column(String(16))
+    to_status: Mapped[str] = mapped_column(String(16), nullable=False)
+    transitioned_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    rationale: Mapped[str] = mapped_column(String, nullable=False)
+    evidence_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    reviewer_status: Mapped[str] = mapped_column(String(24), nullable=False)
+    sequence: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class EventMechanismLinkModel(Base):
+    __tablename__ = "event_mechanism_links"
+
+    link_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    event_id: Mapped[str] = mapped_column(
+        ForeignKey("canonical_events.event_id"), nullable=False, index=True
+    )
+    mechanism_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    confidence: Mapped[float] = mapped_column(nullable=False)
+    expected_horizon: Mapped[str] = mapped_column(String(16), nullable=False)
+    rationale: Mapped[str] = mapped_column(String, nullable=False)
+    evidence_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    reviewer_status: Mapped[str] = mapped_column(String(24), nullable=False)
+    linked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
 def _forbid_mutation(_mapper: Any, _connection: Any, target: Any) -> None:
     raise ImmutableRecordError(
         f"{type(target).__name__} {getattr(target, 'provenance_id', '')} is immutable"
@@ -175,6 +262,10 @@ def _forbid_mutation(_mapper: Any, _connection: Any, target: Any) -> None:
 
 for _model in (
     ArtifactModel,
+    CanonicalEventModel,
+    EventMechanismLinkModel,
+    EventSupportModel,
+    EventTransitionModel,
     SourceModel,
     EvidenceModel,
     EventModel,

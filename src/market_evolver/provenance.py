@@ -15,7 +15,7 @@ def _canonicalize(value: Any) -> Any:
         return {
             field.name: _canonicalize(getattr(value, field.name))
             for field in dataclasses.fields(value)
-            if field.name != "provenance_id"
+            if field.init
         }
     if isinstance(value, datetime):
         return value.isoformat()

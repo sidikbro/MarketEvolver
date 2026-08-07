@@ -71,6 +71,19 @@ class SqlObservationRepository:
         )
         return len(tuple(self.session.scalars(statement)))
 
+    def list_for_source(self, source_id: str) -> list[NormalizedObservation]:
+        statement = (
+            select(NormalizedObservationModel)
+            .where(NormalizedObservationModel.registry_source_id == source_id)
+            .order_by(
+                NormalizedObservationModel.item_key,
+                NormalizedObservationModel.period_start,
+                NormalizedObservationModel.first_observed_at,
+                NormalizedObservationModel.provenance_id,
+            )
+        )
+        return [self._to_domain(model) for model in self.session.scalars(statement)]
+
     @staticmethod
     def _to_domain(model: NormalizedObservationModel) -> NormalizedObservation:
         return NormalizedObservation(

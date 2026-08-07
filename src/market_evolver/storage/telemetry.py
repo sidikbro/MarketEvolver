@@ -10,7 +10,11 @@ from sqlalchemy.orm import Session
 
 from market_evolver.storage.models import (
     ArtifactModel,
+    CanonicalEventModel,
+    EventMechanismLinkModel,
     EventModel,
+    EventSupportModel,
+    EventTransitionModel,
     EvidenceModel,
     HypothesisModel,
     IngestionManifestModel,
@@ -48,6 +52,10 @@ def measure_storage(session: Session) -> StorageTelemetry:
             NormalizedObservationModel,
             RawIngestionModel,
             IngestionManifestModel,
+            CanonicalEventModel,
+            EventSupportModel,
+            EventTransitionModel,
+            EventMechanismLinkModel,
         )
     }
     raw_bytes = int(
