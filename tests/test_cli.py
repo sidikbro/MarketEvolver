@@ -80,6 +80,18 @@ class CliTests(unittest.TestCase):
         self.assertEqual(result, 0)
         self.assertIn('"source_id": "uk.bbc.business"', output.getvalue())
 
+    def test_policy_commands_are_registered_and_source_list_is_offline(self) -> None:
+        parser = build_parser()
+        self.assertEqual(
+            parser.parse_args(["policy", "ingest", "boi-interest"]).source,
+            "boi-interest",
+        )
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            result = main(["policy", "source-list"])
+        self.assertEqual(result, 0)
+        self.assertIn('"source_id": "il.boi"', output.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

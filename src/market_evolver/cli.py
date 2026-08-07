@@ -8,10 +8,15 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from market_evolver.config import AppConfig, load_config
 from market_evolver.errors import GovernanceViolation
+from market_evolver.government.connectors import BankOfIsraelPolicyConnector
+from market_evolver.government.extraction import extract_policy_candidate
+from market_evolver.government.repositories import SqlGovernmentRepository
+from market_evolver.government.schemas import GovernmentAction
 from market_evolver.ingestion.boi import BankOfIsraelConnector
 from market_evolver.ingestion.repositories import SqlManifestRepository
 from market_evolver.ingestion.runner import IngestionRunner
@@ -31,6 +36,7 @@ from market_evolver.observatory.schemas import CanonicalEvent, EventStatus
 from market_evolver.sources.registry import DEFAULT_REGISTRY
 from market_evolver.storage.artifacts import LocalArtifactStore
 from market_evolver.storage.database import create_postgres_engine
+from market_evolver.storage.models import EvidenceModel, GovernmentCandidateModel
 from market_evolver.storage.telemetry import measure_storage
 
 
@@ -97,6 +103,22 @@ def build_parser() -> argparse.ArgumentParser:
     news_candidates.add_argument("--at")
     news_quarantine = news_commands.add_parser("quarantine")
     news_quarantine.add_argument("--at")
+    policy = commands.add_parser("policy")
+    policy_commands = policy.add_subparsers(dest="policy_command", required=True)
+    policy_commands.add_parser("source-list")
+    policy_ingest = policy_commands.add_parser("ingest")
+    policy_ingest.add_argument("source", choices=("boi-interest",))
+    policy_list = policy_commands.add_parser("list")
+    policy_list.add_argument("--at")
+    policy_show = policy_commands.add_parser("show")
+    policy_show.add_argument("action_id")
+    policy_replay = policy_commands.add_parser("replay")
+    policy_replay.add_argument("--at", required=True)
+    policy_transitions = policy_commands.add_parser("transitions")
+    policy_transitions.add_argument("action_id")
+    policy_transitions.add_argument("--at")
+    policy_candidates = policy_commands.add_parser("candidates")
+    policy_candidates.add_argument("--at")
     return parser
 
 
@@ -109,6 +131,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     if args.command == "news" and args.news_command == "source-list":
         return _news_source_list()
+    if args.command == "policy" and args.policy_command == "source-list":
+        return _policy_source_list()
 
     config = load_config(args.config)
     engine = create_postgres_engine(config.database)
@@ -147,6 +171,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _graph_command(args, session)
         if args.command == "news":
             return _news_command(args, config, session)
+        if args.command == "policy":
+            return _policy_command(args, config, session)
         telemetry = measure_storage(session)
         print(
             json.dumps(
@@ -183,6 +209,24 @@ def main(argv: Sequence[str] | None = None) -> int:
                     ],
                     "news_items_by_source": telemetry.news_items_by_source,
                     "news_bytes_by_source": telemetry.news_bytes_by_source,
+                    "policy_documents_by_day": [
+                        {"day": item.day.isoformat(), "items": item.value}
+                        for item in telemetry.policy_documents_by_day
+                    ],
+                    "policy_revisions_by_day": [
+                        {"day": item.day.isoformat(), "items": item.value}
+                        for item in telemetry.policy_revisions_by_day
+                    ],
+                    "policy_transitions_by_day": [
+                        {"day": item.day.isoformat(), "items": item.value}
+                        for item in telemetry.policy_transitions_by_day
+                    ],
+                    "raw_government_bytes_by_day": [
+                        {"day": item.day.isoformat(), "bytes": item.value}
+                        for item in telemetry.raw_government_bytes_by_day
+                    ],
+                    "policy_candidate_count": telemetry.policy_candidate_count,
+                    "policy_promotion_count": telemetry.policy_promotion_count,
                 },
                 indent=2,
             )
@@ -509,6 +553,157 @@ def _news_source_list() -> int:
         )
     )
     return 0
+
+
+def _policy_source_list() -> int:
+    definitions = [
+        item
+        for item in DEFAULT_REGISTRY.list()
+        if item.source_type.value in {"central_bank", "government", "regulator", "legislature"}
+    ]
+    print(
+        json.dumps(
+            [
+                {
+                    "source_id": item.source_id,
+                    "name": item.name,
+                    "enabled": item.enabled,
+                    "method": item.ingestion_method.value,
+                }
+                for item in definitions
+            ],
+            indent=2,
+        )
+    )
+    return 0
+
+
+def _policy_command(args: argparse.Namespace, config: AppConfig, session: Session) -> int:
+    if args.policy_command == "source-list":
+        return _policy_source_list()
+    if args.policy_command == "ingest":
+        if not config.runtime_permissions.network_access:
+            raise GovernanceViolation("policy ingestion requires host-granted network_access")
+        connector = BankOfIsraelPolicyConnector()
+        manifest = IngestionRunner(
+            session,
+            LocalArtifactStore(config.artifact_storage.resolve_root()),
+        ).run(connector, connector.dataset_name)
+        if manifest.status.value == "succeeded":
+            _extract_pending_policy(session)
+            session.commit()
+        print(f"{manifest.run_id}\t{manifest.status.value}")
+        return int(manifest.status.value != "succeeded")
+    repository = SqlGovernmentRepository(session)
+    cutoff = _optional_timestamp(getattr(args, "at", None))
+    if args.policy_command in {"list", "replay"}:
+        actions = repository.get_actions_visible_at(cutoff)
+        print(
+            json.dumps(
+                [
+                    {
+                        **_policy_dict(item),
+                        "status_at_cutoff": (
+                            None
+                            if (status := repository.current_status(item.action_id, cutoff)) is None
+                            else status.value
+                        ),
+                    }
+                    for item in actions
+                ],
+                indent=2,
+            )
+        )
+        return 0
+    if args.policy_command == "show":
+        action = repository.get(args.action_id)
+        if action is None:
+            print(json.dumps({"error": "government action not found"}))
+            return 1
+        print(json.dumps(_policy_dict(action), indent=2))
+        return 0
+    if args.policy_command == "transitions":
+        print(
+            json.dumps(
+                [
+                    {
+                        "transition_id": item.transition_id,
+                        "from": None if item.from_status is None else item.from_status.value,
+                        "to": item.to_status.value,
+                        "at": item.transitioned_at.isoformat(),
+                        "evidence_ids": item.evidence_ids,
+                        "rationale": item.rationale,
+                    }
+                    for item in repository.transitions(args.action_id, cutoff)
+                ],
+                indent=2,
+            )
+        )
+        return 0
+    print(
+        json.dumps(
+            [
+                {
+                    "candidate_id": item.candidate_id,
+                    "issuing_body": item.issuing_body,
+                    "action_type": (
+                        None
+                        if item.possible_action_type is None
+                        else item.possible_action_type.value
+                    ),
+                    "transition": (
+                        None if item.possible_transition is None else item.possible_transition.value
+                    ),
+                    "explicit_values": item.explicit_values,
+                    "mechanisms": item.candidate_mechanisms,
+                    "expectation_status": item.expectation_status.value,
+                    "review_state": item.review_state.value,
+                }
+                for item in repository.get_candidates_visible_at(cutoff)
+            ],
+            indent=2,
+        )
+    )
+    return 0
+
+
+def _extract_pending_policy(session: Session) -> None:
+    evidence = session.scalars(
+        select(EvidenceModel).where(
+            EvidenceModel.claim.like("Bank of Israel published current policy interest rate%")
+        )
+    )
+    repository = SqlGovernmentRepository(session)
+    for item in evidence:
+        candidate = extract_policy_candidate(
+            evidence_id=item.provenance_id,
+            text=item.claim,
+            created_at=item.observed_at,
+            issuing_body="institution.boi",
+        )
+        if session.get(GovernmentCandidateModel, candidate.candidate_id) is None:
+            repository.add_candidate(candidate)
+
+
+def _policy_dict(item: GovernmentAction) -> dict[str, object]:
+    return {
+        "action_id": item.action_id,
+        "jurisdiction": item.jurisdiction,
+        "issuing_body": item.issuing_body,
+        "action_type": item.action_type.value,
+        "title": item.title,
+        "status": item.status.value,
+        "announced_at": None if item.announced_at is None else item.announced_at.isoformat(),
+        "published_at": None if item.published_at is None else item.published_at.isoformat(),
+        "effective_at": None if item.effective_at is None else item.effective_at.isoformat(),
+        "first_observed_at": item.first_observed_at.isoformat(),
+        "supersedes_action_id": item.supersedes_action_id,
+        "evidence_ids": item.source_evidence_ids,
+        "candidate_mechanisms": item.candidate_mechanisms,
+        "expectation_status": item.expectation_status.value,
+        "version": item.version,
+        "provenance": item.provenance,
+    }
 
 
 def _news_dict(item: NewsItem) -> dict[str, object]:

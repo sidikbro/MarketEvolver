@@ -17,6 +17,9 @@ from market_evolver.storage.models import (
     EventTransitionModel,
     EvidenceContradictionModel,
     EvidenceModel,
+    GovernmentActionModel,
+    GovernmentCandidateModel,
+    GovernmentTransitionModel,
     HypothesisModel,
     IngestionManifestModel,
     KnowledgeAliasModel,
@@ -54,6 +57,12 @@ class StorageTelemetry:
     quarantined_news_by_day: tuple[DailyMeasurement, ...] = ()
     news_items_by_source: dict[str, int] | None = None
     news_bytes_by_source: dict[str, int] | None = None
+    policy_documents_by_day: tuple[DailyMeasurement, ...] = ()
+    policy_revisions_by_day: tuple[DailyMeasurement, ...] = ()
+    policy_transitions_by_day: tuple[DailyMeasurement, ...] = ()
+    raw_government_bytes_by_day: tuple[DailyMeasurement, ...] = ()
+    policy_candidate_count: int = 0
+    policy_promotion_count: int = 0
 
 
 def measure_storage(session: Session) -> StorageTelemetry:
@@ -83,6 +92,9 @@ def measure_storage(session: Session) -> StorageTelemetry:
             NewsCandidateReviewModel,
             NewsCorroborationModel,
             EvidenceContradictionModel,
+            GovernmentActionModel,
+            GovernmentTransitionModel,
+            GovernmentCandidateModel,
         )
     }
     raw_bytes = int(
@@ -127,6 +139,27 @@ def measure_storage(session: Session) -> StorageTelemetry:
             revision_by_day[day] = revision_by_day.get(day, 0) + 1
         if item.evidence_security_class == "quarantined":
             quarantine_by_day[day] = quarantine_by_day.get(day, 0) + 1
+    policy_actions = tuple(session.scalars(select(GovernmentActionModel)))
+    policy_transitions = tuple(session.scalars(select(GovernmentTransitionModel)))
+    policy_candidates = tuple(session.scalars(select(GovernmentCandidateModel)))
+    policy_by_day: dict[date, int] = {}
+    policy_revisions: dict[date, int] = {}
+    transition_by_day: dict[date, int] = {}
+    for policy_action in policy_actions:
+        day = policy_action.first_observed_at.date()
+        policy_by_day[day] = policy_by_day.get(day, 0) + 1
+        if policy_action.version > 1:
+            policy_revisions[day] = policy_revisions.get(day, 0) + 1
+    for policy_transition in policy_transitions:
+        day = policy_transition.transitioned_at.date()
+        transition_by_day[day] = transition_by_day.get(day, 0) + 1
+    government_artifacts: dict[date, set[str]] = {}
+    for receipt in session.scalars(
+        select(RawIngestionModel).where(RawIngestionModel.dataset == "policy-interest-rate")
+    ):
+        government_artifacts.setdefault(receipt.first_observed_at.date(), set()).add(
+            receipt.artifact_sha256
+        )
     return StorageTelemetry(
         raw_artifact_bytes=raw_bytes,
         database_record_counts=counts,
@@ -152,6 +185,17 @@ def measure_storage(session: Session) -> StorageTelemetry:
             source_id: sum(artifact_sizes.get(digest, 0) for digest in digests)
             for source_id, digests in sorted(source_artifacts.items())
         },
+        policy_documents_by_day=_measurements(policy_by_day),
+        policy_revisions_by_day=_measurements(policy_revisions),
+        policy_transitions_by_day=_measurements(transition_by_day),
+        raw_government_bytes_by_day=_measurements(
+            {
+                day: sum(artifact_sizes.get(digest, 0) for digest in digests)
+                for day, digests in government_artifacts.items()
+            }
+        ),
+        policy_candidate_count=len(policy_candidates),
+        policy_promotion_count=sum(item.review_state == "promoted" for item in policy_candidates),
     )
 
 

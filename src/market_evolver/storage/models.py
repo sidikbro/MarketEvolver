@@ -454,6 +454,72 @@ class EvidenceContradictionModel(Base):
     )
 
 
+class GovernmentActionModel(Base):
+    __tablename__ = "government_actions"
+
+    action_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    jurisdiction: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    issuing_body: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    action_type: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    description_reference: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False)
+    announced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    effective_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    first_observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    supersedes_action_id: Mapped[str | None] = mapped_column(String(96), index=True)
+    source_evidence_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    affected_entities: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    affected_sectors: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    candidate_mechanisms: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    confidence: Mapped[float] = mapped_column(nullable=False)
+    provenance: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    expectation_status: Mapped[str] = mapped_column(String(16), nullable=False)
+
+
+class GovernmentTransitionModel(Base):
+    __tablename__ = "government_transitions"
+
+    transition_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    action_id: Mapped[str] = mapped_column(
+        ForeignKey("government_actions.action_id"), nullable=False, index=True
+    )
+    from_status: Mapped[str | None] = mapped_column(String(24))
+    to_status: Mapped[str] = mapped_column(String(24), nullable=False)
+    transitioned_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    evidence_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    rationale: Mapped[str] = mapped_column(String, nullable=False)
+    sequence: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class GovernmentCandidateModel(Base):
+    __tablename__ = "government_action_candidates"
+
+    candidate_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    evidence_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    issuing_body: Mapped[str | None] = mapped_column(String(128))
+    possible_action_type: Mapped[str | None] = mapped_column(String(32))
+    possible_transition: Mapped[str | None] = mapped_column(String(24))
+    explicit_dates: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    explicit_values: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    entities: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    candidate_mechanisms: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    extraction_method: Mapped[str] = mapped_column(String(128), nullable=False)
+    confidence: Mapped[float] = mapped_column(nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    review_state: Mapped[str] = mapped_column(String(24), nullable=False)
+    expectation_status: Mapped[str] = mapped_column(String(16), nullable=False)
+
+
 def _forbid_mutation(_mapper: Any, _connection: Any, target: Any) -> None:
     raise ImmutableRecordError(
         f"{type(target).__name__} {getattr(target, 'provenance_id', '')} is immutable"
@@ -476,6 +542,9 @@ for _model in (
     NewsEntityModel,
     NewsItemModel,
     EvidenceContradictionModel,
+    GovernmentActionModel,
+    GovernmentCandidateModel,
+    GovernmentTransitionModel,
     SourceModel,
     EvidenceModel,
     EventModel,
