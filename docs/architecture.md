@@ -7,8 +7,9 @@ package has no order, portfolio, broker, leverage, derivative, credential, or
 real-money abstractions. A `ResearchDecision` is an epistemic record whose
 strongest outcome is `accept_for_research`; it is not an execution command.
 
-Version 0.2 persists that research graph. PostgreSQL is the authoritative
-metadata store; raw bytes live behind an immutable artifact-store interface.
+PostgreSQL is the authoritative metadata store; raw bytes live behind an
+immutable artifact-store interface. Version 0.3 adds a registry of external
+authorities and a deliberately narrow official-data ingestion path.
 
 ## Layers
 
@@ -30,11 +31,16 @@ metadata store; raw bytes live behind an immutable artifact-store interface.
    PostgreSQL stores hash, size, MIME type, relative path, and creation time.
 8. **Labs** implement one small `ResearchLab` protocol. News, Social, Trends,
    Government, and Geopolitical labs can therefore arrive independently.
+9. **Source registry** fixes stable authority IDs, expected media types,
+   geography, timezone, ingestion method, enabled state, and revision caveats.
+10. **Ingestion runners** enforce the sequence below and record every attempt in
+    an operational manifest. Connectors cannot parse before raw persistence.
 
 ```text
-external content -> Source -> Evidence -> Event/Hypothesis -> ResearchDecision
-                         provenance graph             |
-                                                      no execution edge
+fetch -> local first_observed_at + SHA-256 -> immutable raw artifact + receipt
+      -> normalize -> parse -> Source + NormalizedObservation -> Evidence
+                                                               |
+                                                               no execution edge
 
 raw bytes -> ArtifactStore (content addressed) <- artifact metadata -> PostgreSQL
 host policy ---------> RuntimePermissions (separate capability plane)
@@ -52,6 +58,10 @@ host policy ---------> RuntimePermissions (separate capability plane)
 - `EvidenceRepository.visible_at(T)` returns only evidence with an aware
   `observed_at <= T`. Ingestion rejects evidence dated before any referenced
   source and decisions containing post-cutoff evidence or hypotheses.
+- Every normalized observation separately stores its described period,
+  source-supplied publication time, local first-observed time, effective time,
+  and optional supersession time. Historical visibility is determined only by
+  local first observation, never by the period date or today's API availability.
 
 ## Provenance
 
@@ -77,6 +87,26 @@ The artifact root comes from configuration or
 `MARKET_EVOLVER_ARTIFACT_ROOT`. Moving from a project-local `data` directory to
 `/mnt/marketevolver` therefore changes deployment configuration, not application
 code or database identifiers.
+
+Alembic revision `0002` makes source publication time optional and adds raw
+ingestion receipts, normalized observations, and run manifests. A raw receipt is
+committed before parsing. Identical source/dataset/content hashes reuse that
+receipt and its original first-observed timestamp. If parsing previously failed,
+the same retained artifact may be retried; completed observations are skipped.
+
+## Connectors and operations
+
+The connector contract contains `fetch`, `persist_raw`, `normalize`, `parse`,
+and `emit_evidence`. Only the Bank of Israel connector is enabled. It consumes
+the official current representative-rates JSON endpoint and preserves the raw
+payload, currency unit multiplier, rate timestamp, and local observation time.
+CBS and TASE/MAYA implement disabled adapter skeletons pending stable, reviewed
+API contracts.
+
+Each run manifest records identity, timestamps, outcome, item and duplicate
+counts, bytes, new artifacts, parser version, and a bounded error summary.
+Telemetry exposes measured raw bytes, table counts, downloaded bytes per day,
+and observation growth per day. It performs no forecasting.
 
 ## Governance
 

@@ -24,6 +24,11 @@ configuration.
 | Artifact overwrite or hash substitution | Content-addressed paths, atomic no-replace publication, and verification on write/read |
 | Duplicate or concurrent ingestion | Primary-key content IDs and idempotent equality checks |
 | Broken provenance chain | Repository insertion verifies every referenced parent |
+| Parser acts on unretained content | Runner durably stores and hashes raw bytes before parsing |
+| Retry changes historical visibility | Raw receipt reuses the original local first-observed timestamp |
+| Source silently changes response type | Registry allowlists expected media types; mismatch fails |
+| Historical API data mistaken for historical availability | Period/publication/effective times remain separate from local first observation |
+| Partial or failed ingestion becomes invisible | Every run has a durable success/failure manifest and bounded error summary |
 | Database downgrade or misdirection | Explicit PostgreSQL URL, mandatory configuration, TLS default, versioned Alembic migration |
 | Mutation through ORM | Update/delete hooks fail; production roles should also deny UPDATE/DELETE |
 | Prompt injection in news/social text | Content is data, not instructions; labs expose evidence only |
@@ -54,3 +59,11 @@ metadata and artifacts consistently, monitor integrity failures, and periodicall
 reconcile stored bytes with database hashes. Local artifact writes do not provide
 multi-host coordination; a future shared backend must preserve conditional
 create/no-overwrite semantics.
+
+The Bank of Israel endpoint is authoritative but remains external and untrusted
+at the transport/parser boundary. TLS, expected media types, strict JSON fields,
+timezone validation, and immutable raw retention limit silent corruption.
+However, v0.3 does not yet enforce response-size limits, certificate pinning, or
+semantic reconciliation against the SDMX series database. The current-rates API
+also lacks an explicit revision history; its `lastUpdate` must not substitute
+for MarketEvolver's local first-observed time.
