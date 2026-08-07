@@ -12,6 +12,7 @@ class ConfigTests(unittest.TestCase):
         self.assertFalse(config.governance.allow_execution)
         self.assertFalse(config.runtime_permissions.broker_access)
         self.assertEqual(config.research_provider.provider, "mock")
+        self.assertEqual(config.market_storage.root, "data/market")
 
     def test_execution_cannot_be_enabled(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

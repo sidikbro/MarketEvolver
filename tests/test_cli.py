@@ -135,6 +135,17 @@ class CliTests(unittest.TestCase):
             "nice",
         )
 
+    def test_market_replay_and_benchmark_commands_are_registered(self) -> None:
+        parser = build_parser()
+        self.assertEqual(parser.parse_args(["market", "seed-assets"]).market_command, "seed-assets")
+        replay = parser.parse_args(
+            ["replay", "run", "quiet", "--mode", "no_information", "--anonymized"]
+        )
+        self.assertEqual(replay.case, "quiet")
+        self.assertTrue(replay.anonymized)
+        self.assertEqual(parser.parse_args(["replay", "inspect", "run:1"]).run_id, "run:1")
+        self.assertEqual(parser.parse_args(["benchmark", "report"]).benchmark_command, "report")
+
 
 if __name__ == "__main__":
     unittest.main()

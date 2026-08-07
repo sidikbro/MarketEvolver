@@ -742,6 +742,166 @@ class ResearchTraceModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
+class AssetModel(Base):
+    __tablename__ = "assets"
+
+    asset_version_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    asset_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    symbol: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    venue: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    asset_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    currency: Mapped[str] = mapped_column(String(8), nullable=False)
+    company_id: Mapped[str | None] = mapped_column(String(128), index=True)
+    entity_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    benchmark_asset_id: Mapped[str | None] = mapped_column(String(128))
+    valid_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    valid_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    provenance: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class MarketPartitionModel(Base):
+    __tablename__ = "market_partitions"
+
+    sha256: Mapped[str] = mapped_column(String(64), primary_key=True)
+    relative_path: Mapped[str] = mapped_column(String(1024), nullable=False, unique=True)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    row_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    dataset_version: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
+class MarketObservationModel(Base):
+    __tablename__ = "market_observations"
+
+    observation_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    asset_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    venue: Mapped[str] = mapped_column(String(32), nullable=False)
+    observation_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    market_timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    source_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    adjustment_status: Mapped[str] = mapped_column(String(16), nullable=False)
+    currency: Mapped[str] = mapped_column(String(8), nullable=False)
+    parser_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    provenance: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    partition_sha256: Mapped[str] = mapped_column(
+        ForeignKey("market_partitions.sha256"), nullable=False, index=True
+    )
+
+
+class CorporateActionModel(Base):
+    __tablename__ = "corporate_actions"
+
+    action_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    asset_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    action_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    effective_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    announced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    source_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    evidence_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    value: Mapped[str | None] = mapped_column(String(128))
+    currency: Mapped[str | None] = mapped_column(String(8))
+    old_symbol: Mapped[str | None] = mapped_column(String(64))
+    new_symbol: Mapped[str | None] = mapped_column(String(64))
+
+
+class TradingSessionModel(Base):
+    __tablename__ = "trading_sessions"
+
+    session_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    venue: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    session_date: Mapped[str] = mapped_column(String(10), nullable=False)
+    opens_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    closes_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    is_trading_day: Mapped[bool] = mapped_column(nullable=False)
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    source_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    parser_version: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
+class ReplayCaseModel(Base):
+    __tablename__ = "replay_cases"
+
+    case_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    case_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    entity_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    asset_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    cutoff: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    horizon: Mapped[str] = mapped_column(String(64), nullable=False)
+    available_evidence_manifest_id: Mapped[str] = mapped_column(String(96), nullable=False)
+    benchmark_asset_id: Mapped[str | None] = mapped_column(String(128))
+    expected_output_schema: Mapped[str] = mapped_column(String(64), nullable=False)
+    evaluation_protocol: Mapped[str] = mapped_column(String(64), nullable=False)
+    dataset_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class ReplayCommitmentModel(Base):
+    __tablename__ = "replay_commitments"
+
+    commitment_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    case_id: Mapped[str] = mapped_column(ForeignKey("replay_cases.case_id"), nullable=False)
+    replay_timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    context_manifest_id: Mapped[str] = mapped_column(String(96), nullable=False)
+    hypothesis_id: Mapped[str] = mapped_column(String(96), nullable=False)
+    expected_horizon: Mapped[str] = mapped_column(String(64), nullable=False)
+    measurable_outcome: Mapped[str] = mapped_column(String, nullable=False)
+    falsification_criterion: Mapped[str] = mapped_column(String, nullable=False)
+    confidence: Mapped[float] = mapped_column(nullable=False)
+    reviewer_decision: Mapped[str] = mapped_column(String(32), nullable=False)
+    research_mode: Mapped[str] = mapped_column(String(32), nullable=False)
+    committed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class ReplayRunModel(Base):
+    __tablename__ = "replay_runs"
+
+    run_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    case_id: Mapped[str] = mapped_column(ForeignKey("replay_cases.case_id"), nullable=False)
+    commitment_id: Mapped[str] = mapped_column(
+        ForeignKey("replay_commitments.commitment_id"), nullable=False
+    )
+    named: Mapped[bool] = mapped_column(nullable=False)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    finished_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    runtime_ms: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+
+
+class OutcomeEvaluationModel(Base):
+    __tablename__ = "outcome_evaluations"
+
+    evaluation_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    run_id: Mapped[str] = mapped_column(ForeignKey("replay_runs.run_id"), nullable=False)
+    evaluated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    horizon_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    forward_return: Mapped[str | None] = mapped_column(String(128))
+    benchmark_relative_return: Mapped[str | None] = mapped_column(String(128))
+    maximum_adverse_excursion: Mapped[str | None] = mapped_column(String(128))
+    maximum_favorable_excursion: Mapped[str | None] = mapped_column(String(128))
+    volatility: Mapped[str | None] = mapped_column(String(128))
+    drawdown: Mapped[str | None] = mapped_column(String(128))
+    direction: Mapped[str | None] = mapped_column(String(16))
+    provenance_observation_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+
+
+class BenchmarkPairModel(Base):
+    __tablename__ = "benchmark_pairs"
+
+    pair_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    case_id: Mapped[str] = mapped_column(ForeignKey("replay_cases.case_id"), nullable=False)
+    named_run_id: Mapped[str] = mapped_column(ForeignKey("replay_runs.run_id"), nullable=False)
+    anonymized_run_id: Mapped[str] = mapped_column(ForeignKey("replay_runs.run_id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
 def _forbid_mutation(_mapper: Any, _connection: Any, target: Any) -> None:
     raise ImmutableRecordError(
         f"{type(target).__name__} {getattr(target, 'provenance_id', '')} is immutable"
@@ -780,6 +940,16 @@ for _model in (
     ResearchHypothesisModel,
     ResearchReviewModel,
     ResearchTraceModel,
+    AssetModel,
+    MarketPartitionModel,
+    MarketObservationModel,
+    CorporateActionModel,
+    TradingSessionModel,
+    ReplayCaseModel,
+    ReplayCommitmentModel,
+    ReplayRunModel,
+    OutcomeEvaluationModel,
+    BenchmarkPairModel,
     SourceModel,
     EvidenceModel,
     EventModel,

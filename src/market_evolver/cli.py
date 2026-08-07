@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 from collections.abc import Sequence
+from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -27,6 +28,9 @@ from market_evolver.ingestion.runner import IngestionRunner
 from market_evolver.knowledge.repositories import SqlKnowledgeGraph
 from market_evolver.knowledge.schemas import EntityVersion
 from market_evolver.knowledge.seed import seed_knowledge_graph
+from market_evolver.market.schemas import AdjustmentStatus, MarketObservation, ObservationType
+from market_evolver.market.seed import seed_assets
+from market_evolver.market.store import MarketDataStore
 from market_evolver.news.connectors import BbcBusinessRssConnector
 from market_evolver.news.repositories import SqlNewsRepository
 from market_evolver.news.runner import NewsIngestionRunner
@@ -37,6 +41,10 @@ from market_evolver.observatory.repositories import (
     observatory_summary,
 )
 from market_evolver.observatory.schemas import CanonicalEvent, EventStatus
+from market_evolver.replay.benchmark import BenchmarkRunner, benchmark_metrics
+from market_evolver.replay.engine import ReplayEngine
+from market_evolver.replay.repositories import SqlReplayRepository
+from market_evolver.replay.schemas import ResearchMode
 from market_evolver.research.gates import anonymize_context
 from market_evolver.research.providers import JsonHttpProvider, MockProvider, ResearchProvider
 from market_evolver.research.repositories import SqlResearchRepository
@@ -167,6 +175,28 @@ def build_parser() -> argparse.ArgumentParser:
     review.add_argument("hypothesis_id")
     trace = research_commands.add_parser("trace")
     trace.add_argument("research_id")
+    market = commands.add_parser("market")
+    market_commands = market.add_subparsers(dest="market_command", required=True)
+    market_commands.add_parser("seed-assets")
+    market_commands.add_parser("asset-list")
+    market_ingest = market_commands.add_parser("ingest")
+    market_ingest.add_argument("path", type=Path)
+    market_ingest.add_argument("--dataset-version", required=True)
+    replay = commands.add_parser("replay")
+    replay_commands = replay.add_subparsers(dest="replay_command", required=True)
+    replay_commands.add_parser("seed-cases")
+    replay_run = replay_commands.add_parser("run")
+    replay_run.add_argument("case")
+    replay_run.add_argument(
+        "--mode", choices=tuple(item.value for item in ResearchMode), required=True
+    )
+    replay_run.add_argument("--anonymized", action="store_true")
+    replay_inspect = replay_commands.add_parser("inspect")
+    replay_inspect.add_argument("run_id")
+    benchmark = commands.add_parser("benchmark")
+    benchmark_commands = benchmark.add_subparsers(dest="benchmark_command", required=True)
+    benchmark_commands.add_parser("run")
+    benchmark_commands.add_parser("report")
     return parser
 
 
@@ -225,6 +255,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _company_command(args, session)
         if args.command == "research":
             return _research_command(args, config, session)
+        if args.command == "market":
+            return _market_command(args, config, session)
+        if args.command == "replay":
+            return _replay_command(args, config, session)
+        if args.command == "benchmark":
+            return _benchmark_command(args, config, session)
         telemetry = measure_storage(session)
         print(
             json.dumps(
@@ -279,6 +315,18 @@ def main(argv: Sequence[str] | None = None) -> int:
                     ],
                     "policy_candidate_count": telemetry.policy_candidate_count,
                     "policy_promotion_count": telemetry.policy_promotion_count,
+                    "market_rows_by_day": [
+                        {"day": item.day.isoformat(), "rows": item.value}
+                        for item in telemetry.market_rows_by_day
+                    ],
+                    "parquet_bytes_by_day": [
+                        {"day": item.day.isoformat(), "bytes": item.value}
+                        for item in telemetry.parquet_bytes_by_day
+                    ],
+                    "market_assets": telemetry.market_assets,
+                    "replay_cases": telemetry.replay_cases,
+                    "replay_runtime_ms": telemetry.replay_runtime_ms,
+                    "benchmark_artifact_bytes": telemetry.benchmark_artifact_bytes,
                 },
                 indent=2,
             )
@@ -1061,6 +1109,161 @@ def _context_dict(context: object) -> dict[str, object]:
             }
             for item in context.items
         ],
+    }
+
+
+def _market_command(args: argparse.Namespace, config: AppConfig, session: Session) -> int:
+    store = MarketDataStore(session, config.market_storage.resolve_root())
+    if args.market_command == "seed-assets":
+        seed_knowledge_graph(session)
+        seed_companies(session)
+        inserted = seed_assets(session, store)
+        session.commit()
+        print(json.dumps({"assets_inserted": inserted}))
+        return 0
+    if args.market_command == "asset-list":
+        print(
+            json.dumps(
+                [
+                    {
+                        "asset_id": item.asset_id,
+                        "symbol": item.symbol,
+                        "venue": item.venue,
+                        "asset_type": item.asset_type.value,
+                        "currency": item.currency,
+                        "company_id": item.company_id,
+                        "entity_id": item.entity_id,
+                        "benchmark_asset_id": item.benchmark_asset_id,
+                    }
+                    for item in store.list_assets(datetime.now(UTC))
+                ],
+                indent=2,
+            )
+        )
+        return 0
+    try:
+        document = json.loads(args.path.read_text(encoding="utf-8"))
+        if not isinstance(document, list):
+            raise TypeError
+        observations = tuple(_market_observation_from_dict(item) for item in document)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError) as exc:
+        raise GovernanceViolation("market ingest file is malformed") from exc
+    partition, inserted, duplicates = store.write_observations(
+        observations, dataset_version=args.dataset_version
+    )
+    session.commit()
+    print(
+        json.dumps(
+            {
+                "partition_sha256": partition.sha256,
+                "rows": partition.row_count,
+                "inserted": inserted,
+                "duplicates": duplicates,
+                "bytes": partition.size_bytes,
+            }
+        )
+    )
+    return 0
+
+
+def _replay_command(args: argparse.Namespace, config: AppConfig, session: Session) -> int:
+    market = MarketDataStore(session, config.market_storage.resolve_root())
+    replay = ReplayEngine(session, market)
+    runner = BenchmarkRunner(session, replay)
+    repository = SqlReplayRepository(session)
+    if args.replay_command == "seed-cases":
+        print(json.dumps({"cases_inserted": runner.seed_cases()}))
+        return 0
+    if args.replay_command == "inspect":
+        run = repository.get_run(args.run_id)
+        if run is None:
+            print(json.dumps({"error": "replay run not found"}))
+            return 1
+        print(json.dumps(_run_dict(run), indent=2))
+        return 0
+    runner.seed_cases()
+    case = next(
+        (
+            item
+            for item in repository.list_cases()
+            if item.case_id == args.case or item.case_type.value == args.case
+        ),
+        None,
+    )
+    if case is None:
+        print(json.dumps({"error": "replay case not found"}))
+        return 1
+    run = runner.run_case(
+        case,
+        ResearchMode(args.mode),
+        named=not args.anonymized,
+        now=datetime.now(UTC),
+    )
+    print(json.dumps(_run_dict(run), indent=2))
+    return 0
+
+
+def _benchmark_command(args: argparse.Namespace, config: AppConfig, session: Session) -> int:
+    market = MarketDataStore(session, config.market_storage.resolve_root())
+    replay = ReplayEngine(session, market)
+    runner = BenchmarkRunner(session, replay)
+    repository = SqlReplayRepository(session)
+    if args.benchmark_command == "run":
+        runs = runner.run_all(datetime.now(UTC))
+        print(json.dumps({"runs_created": len(runs), "cases": len(repository.list_cases())}))
+        return 0
+    runs = tuple(repository.list_runs())
+    evaluations = tuple(repository.list_evaluations())
+    metrics = benchmark_metrics(runs, evaluations)
+    print(
+        json.dumps(
+            {
+                "runs": len(runs),
+                "evaluations": len(evaluations),
+                **asdict(metrics),
+            },
+            indent=2,
+        )
+    )
+    return 0
+
+
+def _market_observation_from_dict(item: object) -> MarketObservation:
+    if not isinstance(item, dict):
+        raise TypeError
+    return MarketObservation(
+        asset_id=str(item["asset_id"]),
+        venue=str(item["venue"]),
+        observation_type=ObservationType(item["observation_type"]),
+        market_timestamp=_parse_timestamp(str(item["market_timestamp"])),
+        observed_at=_parse_timestamp(str(item["observed_at"])),
+        source_id=str(item["source_id"]),
+        adjustment_status=AdjustmentStatus(item["adjustment_status"]),
+        currency=str(item["currency"]),
+        parser_version=str(item["parser_version"]),
+        provenance=tuple(str(value) for value in item["provenance"]),
+        open=None if item.get("open") is None else str(item["open"]),
+        high=None if item.get("high") is None else str(item["high"]),
+        low=None if item.get("low") is None else str(item["low"]),
+        close=None if item.get("close") is None else str(item["close"]),
+        volume=None if item.get("volume") is None else str(item["volume"]),
+        value=None if item.get("value") is None else str(item["value"]),
+    )
+
+
+def _run_dict(item: object) -> dict[str, object]:
+    from market_evolver.replay.schemas import ReplayRun
+
+    assert isinstance(item, ReplayRun)
+    return {
+        "run_id": item.run_id,
+        "case_id": item.case_id,
+        "commitment_id": item.commitment_id,
+        "named": item.named,
+        "started_at": item.started_at.isoformat(),
+        "finished_at": item.finished_at.isoformat(),
+        "runtime_ms": item.runtime_ms,
+        "status": item.status,
     }
 
 

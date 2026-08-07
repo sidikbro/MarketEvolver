@@ -11,6 +11,8 @@ from sqlalchemy.orm import Session
 from market_evolver.storage.models import (
     AnonymizationMappingModel,
     ArtifactModel,
+    AssetModel,
+    BenchmarkPairModel,
     CanonicalEventModel,
     CompanyExposureModel,
     CompanyModel,
@@ -33,14 +35,20 @@ from market_evolver.storage.models import (
     KnowledgeEntityModel,
     KnowledgeExposureModel,
     KnowledgeRelationshipModel,
+    MarketObservationModel,
+    MarketPartitionModel,
     NewsCandidateModel,
     NewsCandidateReviewModel,
     NewsCorroborationModel,
     NewsEntityModel,
     NewsItemModel,
     NormalizedObservationModel,
+    OutcomeEvaluationModel,
     ProviderCallModel,
     RawIngestionModel,
+    ReplayCaseModel,
+    ReplayCommitmentModel,
+    ReplayRunModel,
     ResearchClaimModel,
     ResearchContextModel,
     ResearchDecisionModel,
@@ -76,6 +84,12 @@ class StorageTelemetry:
     raw_government_bytes_by_day: tuple[DailyMeasurement, ...] = ()
     policy_candidate_count: int = 0
     policy_promotion_count: int = 0
+    market_rows_by_day: tuple[DailyMeasurement, ...] = ()
+    parquet_bytes_by_day: tuple[DailyMeasurement, ...] = ()
+    market_assets: int = 0
+    replay_cases: int = 0
+    replay_runtime_ms: int = 0
+    benchmark_artifact_bytes: int = 0
 
 
 def measure_storage(session: Session) -> StorageTelemetry:
@@ -121,6 +135,14 @@ def measure_storage(session: Session) -> StorageTelemetry:
             ResearchReviewModel,
             ResearchTraceModel,
             AnonymizationMappingModel,
+            AssetModel,
+            MarketPartitionModel,
+            MarketObservationModel,
+            ReplayCaseModel,
+            ReplayCommitmentModel,
+            ReplayRunModel,
+            OutcomeEvaluationModel,
+            BenchmarkPairModel,
         )
     }
     raw_bytes = int(
@@ -186,6 +208,15 @@ def measure_storage(session: Session) -> StorageTelemetry:
         government_artifacts.setdefault(receipt.first_observed_at.date(), set()).add(
             receipt.artifact_sha256
         )
+    market_rows: dict[date, int] = {}
+    for observation in session.scalars(select(MarketObservationModel)):
+        day = observation.observed_at.date()
+        market_rows[day] = market_rows.get(day, 0) + 1
+    parquet_bytes: dict[date, int] = {}
+    partitions = tuple(session.scalars(select(MarketPartitionModel)))
+    for partition in partitions:
+        day = partition.created_at.date()
+        parquet_bytes[day] = parquet_bytes.get(day, 0) + partition.size_bytes
     return StorageTelemetry(
         raw_artifact_bytes=raw_bytes,
         database_record_counts=counts,
@@ -222,6 +253,14 @@ def measure_storage(session: Session) -> StorageTelemetry:
         ),
         policy_candidate_count=len(policy_candidates),
         policy_promotion_count=sum(item.review_state == "promoted" for item in policy_candidates),
+        market_rows_by_day=_measurements(market_rows),
+        parquet_bytes_by_day=_measurements(parquet_bytes),
+        market_assets=len(set(session.scalars(select(AssetModel.asset_id)))),
+        replay_cases=_count(session, ReplayCaseModel),
+        replay_runtime_ms=int(
+            session.scalar(select(func.coalesce(func.sum(ReplayRunModel.runtime_ms), 0))) or 0
+        ),
+        benchmark_artifact_bytes=sum(item.size_bytes for item in partitions),
     )
 
 

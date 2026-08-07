@@ -2,7 +2,9 @@
 
 import hashlib
 import os
+import tempfile
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -23,6 +25,7 @@ from market_evolver.company.schemas import (
     Listing,
     RestatementStatus,
 )
+from market_evolver.company.seed import seed_companies
 from market_evolver.government.repositories import SqlGovernmentRepository
 from market_evolver.government.schemas import (
     GovernmentAction,
@@ -32,12 +35,23 @@ from market_evolver.government.schemas import (
 from market_evolver.knowledge.repositories import SqlKnowledgeGraph
 from market_evolver.knowledge.schemas import EntityVersion, KnowledgeEntityType
 from market_evolver.knowledge.seed import seed_knowledge_graph
+from market_evolver.market.schemas import AdjustmentStatus, MarketObservation, ObservationType
+from market_evolver.market.seed import seed_assets
+from market_evolver.market.store import MarketDataStore
 from market_evolver.news.extraction import content_fingerprint
 from market_evolver.news.repositories import SqlNewsRepository
 from market_evolver.news.schemas import (
     EvidenceSecurityClass,
     ExtractionStatus,
     NewsItem,
+)
+from market_evolver.replay.engine import ReplayEngine
+from market_evolver.replay.repositories import SqlReplayRepository
+from market_evolver.replay.schemas import (
+    ReplayCase,
+    ReplayCaseType,
+    ResearchCommitment,
+    ResearchMode,
 )
 from market_evolver.research.providers import MockProvider
 from market_evolver.research.repositories import SqlResearchRepository
@@ -75,9 +89,9 @@ def migrated_engine(postgres_url: str):
         os.environ["MARKET_EVOLVER_DATABASE_URL"] = previous
 
 
-def test_migrations_reach_0008(migrated_engine) -> None:
+def test_migrations_reach_0009(migrated_engine) -> None:
     with migrated_engine.connect() as connection:
-        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0008"
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0009"
 
 
 def test_append_only_update_and_delete_are_rejected(migrated_engine) -> None:
@@ -418,4 +432,83 @@ def test_research_context_trace_reviewer_replay_and_append_only(migrated_engine)
                 "WHERE research_context_id = :id"
             ),
             {"id": context.research_context_id},
+        )
+
+
+def test_market_parquet_replay_cutoff_and_commitment_append_only(migrated_engine) -> None:
+    now = datetime.now(UTC)
+    token = uuid4().hex
+    with tempfile.TemporaryDirectory() as directory, Session(migrated_engine) as session:
+        seed_knowledge_graph(session)
+        seed_companies(session)
+        store = MarketDataStore(session, Path(directory))
+        seed_assets(session, store)
+        observation = MarketObservation(
+            "asset.xtae.nice",
+            "XTAE",
+            ObservationType.OHLCV,
+            now - timedelta(hours=2),
+            now - timedelta(hours=1),
+            "integration.market",
+            AdjustmentStatus.RAW,
+            "ILS",
+            "integration/1",
+            (f"integration:{token}",),
+            "99",
+            "101",
+            "98",
+            "100",
+            "1000",
+        )
+        store.write_observations((observation,), dataset_version=f"integration/{token}")
+        assert (
+            store.get_market_data(
+                observation.asset_id,
+                observation.market_timestamp,
+                observation.market_timestamp,
+                observation.observed_at - timedelta(microseconds=1),
+            )
+            == []
+        )
+        assert store.get_market_data(
+            observation.asset_id,
+            observation.market_timestamp,
+            observation.market_timestamp,
+            observation.observed_at,
+        ) == [observation]
+        case = ReplayCase(
+            ReplayCaseType.QUIET,
+            ("company.nice",),
+            (observation.asset_id,),
+            observation.observed_at,
+            "1 day",
+            f"manifest:{token}",
+            None,
+            "research-hypothesis/v1",
+            "forward-market-outcome/1",
+            f"integration/{token}",
+            now,
+        )
+        repository = SqlReplayRepository(session)
+        repository.add_case(case)
+        commitment = ResearchCommitment(
+            case.case_id,
+            case.cutoff,
+            f"context:{token}",
+            f"hypothesis:{token}",
+            case.horizon,
+            "Observe a measurable outcome.",
+            "The outcome is absent.",
+            0.5,
+            "reviewed",
+            ResearchMode.NO_INFORMATION,
+            now,
+        )
+        ReplayEngine(session, store).commit(commitment)
+        commitment_id = commitment.commitment_id
+
+    with pytest.raises(DBAPIError), migrated_engine.begin() as connection:
+        connection.execute(
+            text("UPDATE replay_commitments SET confidence = 0.9 WHERE commitment_id = :id"),
+            {"id": commitment_id},
         )

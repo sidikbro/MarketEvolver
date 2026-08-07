@@ -37,3 +37,8 @@ provider = "mock"
 model = "mock-research-v1"
 endpoint_env = "MARKET_EVOLVER_LLM_ENDPOINT"
 authorization_env = "MARKET_EVOLVER_LLM_AUTHORIZATION"
+
+[market_storage]
+# Content-addressed Parquet partitions. Relocate independently of application code.
+root = "data/market"
+root_env = "MARKET_EVOLVER_MARKET_ROOT"

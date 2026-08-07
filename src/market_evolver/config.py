@@ -96,6 +96,19 @@ class ResearchProviderConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class MarketStorageConfig:
+    root: str = "data/market"
+    root_env: str = "MARKET_EVOLVER_MARKET_ROOT"
+
+    def resolve_root(self, environment: dict[str, str] | None = None) -> Path:
+        env = os.environ if environment is None else environment
+        configured = env.get(self.root_env, self.root).strip()
+        if not configured:
+            raise ConfigurationError("market Parquet root cannot be empty")
+        return Path(configured).expanduser()
+
+
+@dataclass(frozen=True, slots=True)
 class AppConfig:
     research: ResearchConfig
     governance: GovernanceConfig
@@ -103,6 +116,7 @@ class AppConfig:
     database: DatabaseConfig
     artifact_storage: ArtifactStorageConfig
     research_provider: ResearchProviderConfig
+    market_storage: MarketStorageConfig
 
 
 def _section(data: dict[str, Any], name: str) -> dict[str, Any]:
@@ -123,6 +137,7 @@ def load_config(path: str | Path) -> AppConfig:
             database=DatabaseConfig(**_section(data, "database")),
             artifact_storage=ArtifactStorageConfig(**_section(data, "artifact_storage")),
             research_provider=ResearchProviderConfig(**_section(data, "research_provider")),
+            market_storage=MarketStorageConfig(**_section(data, "market_storage")),
         )
     except TypeError as exc:
         raise ValidationError(f"invalid configuration: {exc}") from exc

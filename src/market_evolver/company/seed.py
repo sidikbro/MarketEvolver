@@ -67,6 +67,9 @@ _COMPANIES = (
     ("icl", "ICL Group Ltd.", "איי.סי.אל", "ICL", "sector.industrials", "ICL", "0000941221"),
 )
 
+# Public, immutable seed description for linked asset-universe construction.
+CURATED_COMPANIES = _COMPANIES
+
 
 def seed_companies(session: Session, *, observed_at: datetime = SEED_AT) -> tuple[int, int, int]:
     companies = SqlCompanyRepository(session)
