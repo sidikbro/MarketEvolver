@@ -44,6 +44,9 @@ Israel market ontology on top of the evidence and event layers.
 13. **News Lab** stores raw feeds before parsing, classifies evidence security
     independently from publisher trust, extracts only exact entities, and emits
     reviewable candidates rather than canonical events.
+14. **Government Lab** records versioned official actions and append-only,
+    evidence-backed lifecycle transitions without converting policy text into
+    canonical market events automatically.
 
 ```text
 fetch -> local first_observed_at + SHA-256 -> immutable raw artifact + receipt
@@ -181,6 +184,18 @@ corroboration by its own creation time. Edited articles append a revision linked
 to the earlier observation. Exact source/content reingestion is idempotent, while
 normalized cross-publisher copies are marked syndicated rather than independent.
 No News Lab object has an automatic edge to canonical events or runtime policy.
+
+## Government and Regulation Lab
+
+Alembic revision `0006` adds government actions, lifecycle transitions, and
+deterministic action candidates. Replay independently filters action observation
+and transition timestamps. Corrections append versions linked through
+`supersedes_action_id`; expectation status is explicitly unknown.
+
+The enabled BOI policy connector reuses raw-first ingestion for the official
+current-interest JSON endpoint. Other Israeli government and regulator sources
+remain disabled until stable contracts are reviewed. Candidate mechanism
+mappings are direction-neutral and cannot modify knowledge-graph facts.
 
 ## Governance
 

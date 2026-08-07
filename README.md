@@ -1,8 +1,8 @@
 # MarketEvolver
 
-MarketEvolver is a governed financial-market research laboratory. Version 0.6
-adds a News Lab with an explicit trusted/untrusted evidence boundary, immutable
-news revisions, deterministic extraction, and historical replay.
+MarketEvolver is a governed financial-market research laboratory. Version 0.7
+adds a Government and Regulation Lab with immutable policy actions, explicit
+lifecycle transitions, and point-in-time replay.
 
 This repository intentionally contains **no trading bot**, broker integration,
 order placement, leverage, options, or real-money execution capability.
@@ -38,6 +38,10 @@ market-evolver news ingest bbc-business
 market-evolver news replay --at 2025-01-02T12:00:00+00:00
 market-evolver news candidates
 market-evolver news quarantine
+market-evolver policy source-list
+market-evolver policy ingest boi-interest
+market-evolver policy replay --at 2025-01-02T12:00:00+00:00
+market-evolver policy candidates
 ```
 
 External ingestion also requires `network_access = true` in trusted runtime
@@ -45,4 +49,5 @@ configuration. CBS and TASE/MAYA are registered but intentionally disabled.
 
 See [Architecture](docs/architecture.md), [Threat model](docs/threat-model.md),
 [Data sources](docs/data-sources.md), [Event Observatory](docs/event-observatory.md),
-[Knowledge Graph](docs/knowledge-graph.md), and [News Lab](docs/news-lab.md).
+[Knowledge Graph](docs/knowledge-graph.md), [News Lab](docs/news-lab.md), and
+[Government Lab](docs/government-lab.md).

@@ -1,5 +1,22 @@
 # Data sources
 
+## Bank of Israel policy interest
+
+- **Registry ID:** `il.boi`
+- **Authority:** official primary
+- **Endpoint:** official `PublicApi/GetInterest` JSON
+- **Cadence:** current snapshot; publisher-controlled
+- **Timestamp semantics:** next-decision date is explicit; local observation
+  controls visibility; missing release/effective timestamps remain unknown
+- **Revision behavior:** no explicit revision history is exposed
+- **Limitations:** not a historical decision or announcement archive
+
+## Disabled government sources
+
+Ministry of Finance (`il.mof`), Israel Securities Authority (`il.isa`), Knesset
+(`il.knesset`), Competition Authority (`il.competition`), and Tax Authority
+(`il.tax`) are registered but disabled pending source-specific contract review.
+
 ## BBC Business
 
 - **Registry ID:** `uk.bbc.business`

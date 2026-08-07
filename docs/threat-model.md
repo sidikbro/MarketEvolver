@@ -45,6 +45,11 @@ configuration.
 | Malformed XML or encoding reaches extraction | Size limit, strict decoding, DTD/entity rejection, source-contract checks, and quarantine |
 | Later review leaks into replay | Candidate reviews and corroborations are append-only and independently cutoff-filtered |
 | Contradictory evidence is silently discarded | Explicit contradiction records preserve both evidence IDs and unresolved status |
+| Proposal is mistaken for enacted law | Proposal, approval, publication, and effectiveness are separate lifecycle states |
+| Later policy status leaks backward | Action observation and transition timestamps are independently cutoff-filtered |
+| Government correction overwrites history | Corrections append versions with explicit supersession provenance |
+| Missing expectations imply surprise | Expectation status defaults to and remains `unknown` |
+| Policy channel becomes market advice | Mechanism mappings are candidate, confidence-scored, and direction-neutral |
 | Lifecycle state changes without audit | Every explicit transition is an immutable, ordered record with rationale and evidence |
 | Database downgrade or misdirection | Explicit PostgreSQL URL, mandatory configuration, TLS default, versioned Alembic migration |
 | Mutation through ORM or direct SQL | ORM hooks fail and PostgreSQL triggers reject updates/deletes; production roles remain least-privilege |
@@ -114,3 +119,9 @@ provenance but does not fetch linked article pages, translate text, or infer
 sentiment. Exact deterministic duplicate detection will miss paraphrased
 syndication. Operator review remains necessary for corroboration, contradiction
 resolution, and any future canonical-event promotion.
+
+Official government content remains untrusted at the parser boundary and may be
+corrected, delayed, challenged, or partially implemented. The BOI interest API
+is a current snapshot without explicit revision history or release timestamp.
+Government portal contracts can change, and deterministic keyword extraction
+does not provide legal interpretation.
