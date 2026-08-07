@@ -11,6 +11,9 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from market_evolver.company.repositories import SqlCompanyRepository
+from market_evolver.company.schemas import CompanyVersion, Filing
+from market_evolver.company.seed import seed_companies
 from market_evolver.config import AppConfig, load_config
 from market_evolver.errors import GovernanceViolation
 from market_evolver.government.connectors import BankOfIsraelPolicyConnector
@@ -119,6 +122,29 @@ def build_parser() -> argparse.ArgumentParser:
     policy_transitions.add_argument("--at")
     policy_candidates = policy_commands.add_parser("candidates")
     policy_candidates.add_argument("--at")
+    company = commands.add_parser("company")
+    company_commands = company.add_subparsers(dest="company_command", required=True)
+    company_list = company_commands.add_parser("list")
+    company_list.add_argument("--at")
+    company_show = company_commands.add_parser("show")
+    company_show.add_argument("company_id")
+    company_show.add_argument("--at")
+    company_commands.add_parser("seed")
+    fundamentals = commands.add_parser("fundamentals")
+    fundamentals_commands = fundamentals.add_subparsers(dest="fundamentals_command", required=True)
+    fundamentals_show = fundamentals_commands.add_parser("show")
+    fundamentals_show.add_argument("company_id")
+    fundamentals_show.add_argument("--at", required=True)
+    filings = commands.add_parser("filings")
+    filings_commands = filings.add_subparsers(dest="filings_command", required=True)
+    filings_list = filings_commands.add_parser("list")
+    filings_list.add_argument("company_id")
+    filings_list.add_argument("--at")
+    exposures = commands.add_parser("exposures")
+    exposures_commands = exposures.add_subparsers(dest="exposures_command", required=True)
+    exposures_show = exposures_commands.add_parser("show")
+    exposures_show.add_argument("company_id")
+    exposures_show.add_argument("--at", required=True)
     return parser
 
 
@@ -173,6 +199,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _news_command(args, config, session)
         if args.command == "policy":
             return _policy_command(args, config, session)
+        if args.command in {"company", "fundamentals", "filings", "exposures"}:
+            return _company_command(args, session)
         telemetry = measure_storage(session)
         print(
             json.dumps(
@@ -747,6 +775,147 @@ def _knowledge_entity_dict(entity: EntityVersion) -> dict[str, object]:
         "provenance": entity.provenance,
         "confidence": entity.confidence,
         "version": entity.version,
+    }
+
+
+def _company_command(args: argparse.Namespace, session: Session) -> int:
+    repository = SqlCompanyRepository(session)
+    if args.command == "company" and args.company_command == "seed":
+        companies, entities, relationships = seed_companies(session)
+        session.commit()
+        print(
+            json.dumps(
+                {
+                    "companies_inserted": companies,
+                    "entities_inserted": entities,
+                    "relationships_inserted": relationships,
+                }
+            )
+        )
+        return 0
+    cutoff = _optional_timestamp(getattr(args, "at", None))
+    if args.command == "company" and args.company_command == "list":
+        print(
+            json.dumps(
+                [_company_dict(item) for item in repository.list_companies(cutoff)],
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return 0
+    if args.command == "company":
+        company = repository.get_company_at(args.company_id, cutoff)
+        if company is None:
+            print(json.dumps({"error": "company not found", "company_id": args.company_id}))
+            return 1
+        print(json.dumps(_company_dict(company), ensure_ascii=False, indent=2))
+        return 0
+    if args.command == "fundamentals":
+        print(
+            json.dumps(
+                [
+                    {
+                        "observation_id": item.observation_id,
+                        "metric": item.metric.value,
+                        "value": item.value,
+                        "currency": item.currency,
+                        "unit": item.unit,
+                        "fiscal_period_start": item.fiscal_period_start.isoformat(),
+                        "fiscal_period_end": item.fiscal_period_end.isoformat(),
+                        "published_at": item.published_at.isoformat(),
+                        "first_observed_at": item.first_observed_at.isoformat(),
+                        "restatement_status": item.restatement_status.value,
+                        "restates_observation_id": item.restates_observation_id,
+                        "evidence_ids": item.source_evidence_ids,
+                    }
+                    for item in repository.get_fundamentals(args.company_id, cutoff)
+                ],
+                indent=2,
+            )
+        )
+        return 0
+    if args.command == "filings":
+        print(
+            json.dumps(
+                [_filing_dict(item) for item in repository.list_filings(args.company_id, cutoff)],
+                indent=2,
+            )
+        )
+        return 0
+    print(
+        json.dumps(
+            [
+                {
+                    "exposure_id": item.exposure_id,
+                    "exposure_type": item.exposure_type.value,
+                    "target": item.target,
+                    "value": item.value,
+                    "unit": item.unit,
+                    "valid_from": item.valid_from.isoformat(),
+                    "valid_until": (
+                        None if item.valid_until is None else item.valid_until.isoformat()
+                    ),
+                    "first_observed_at": item.first_observed_at.isoformat(),
+                    "evidence_ids": item.source_evidence_ids,
+                    "version": item.version,
+                }
+                for item in repository.get_exposures(args.company_id, cutoff)
+            ],
+            indent=2,
+        )
+    )
+    return 0
+
+
+def _company_dict(item: CompanyVersion) -> dict[str, object]:
+    return {
+        "company_id": item.company_id,
+        "legal_name": item.legal_name,
+        "hebrew_name": item.hebrew_name,
+        "english_name": item.english_name,
+        "aliases": item.aliases,
+        "listings": [
+            {
+                "ticker": listing.ticker,
+                "exchange": listing.exchange,
+                "valid_from": listing.valid_from.isoformat(),
+                "valid_until": (
+                    None if listing.valid_until is None else listing.valid_until.isoformat()
+                ),
+            }
+            for listing in item.listings
+        ],
+        "isin": item.isin,
+        "sector_id": item.sector_id,
+        "industry_id": item.industry_id,
+        "domicile": item.domicile,
+        "status": item.status.value,
+        "dual_listed": item.dual_listed,
+        "identifiers": [{"scheme": key, "value": value} for key, value in item.identifiers],
+        "valid_from": item.valid_from.isoformat(),
+        "valid_until": None if item.valid_until is None else item.valid_until.isoformat(),
+        "observed_at": item.observed_at.isoformat(),
+        "version": item.version,
+        "provenance": item.provenance,
+    }
+
+
+def _filing_dict(item: Filing) -> dict[str, object]:
+    return {
+        "filing_id": item.filing_id,
+        "company_id": item.company_id,
+        "filing_type": item.filing_type.value,
+        "form_type": item.form_type,
+        "accession_number": item.accession_number,
+        "source_uri": item.source_uri,
+        "filed_at": item.filed_at.isoformat(),
+        "first_observed_at": item.first_observed_at.isoformat(),
+        "fiscal_period_start": item.fiscal_period_start.isoformat(),
+        "fiscal_period_end": item.fiscal_period_end.isoformat(),
+        "raw_artifact_sha256": item.raw_artifact_sha256,
+        "evidence_ids": item.source_evidence_ids,
+        "parser_version": item.parser_version,
+        "restates_filing_id": item.restates_filing_id,
     }
 
 

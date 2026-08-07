@@ -12,6 +12,17 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
+from market_evolver.company.repositories import SqlCompanyRepository
+from market_evolver.company.schemas import (
+    CompanyStatus,
+    CompanyVersion,
+    Filing,
+    FilingType,
+    FundamentalObservation,
+    FundamentalType,
+    Listing,
+    RestatementStatus,
+)
 from market_evolver.government.repositories import SqlGovernmentRepository
 from market_evolver.government.schemas import (
     GovernmentAction,
@@ -60,9 +71,9 @@ def migrated_engine(postgres_url: str):
         os.environ["MARKET_EVOLVER_DATABASE_URL"] = previous
 
 
-def test_migrations_reach_0006(migrated_engine) -> None:
+def test_migrations_reach_0007(migrated_engine) -> None:
     with migrated_engine.connect() as connection:
-        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0006"
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0007"
 
 
 def test_append_only_update_and_delete_are_rejected(migrated_engine) -> None:
@@ -225,3 +236,142 @@ def test_news_and_government_cutoff_replay(migrated_engine) -> None:
         assert SqlNewsRepository(session).get_news_visible_at(after) == [news]
         assert SqlGovernmentRepository(session).get_actions_visible_at(before) == []
         assert SqlGovernmentRepository(session).get_actions_visible_at(after) == [action]
+
+
+def test_company_history_restatement_and_append_only(migrated_engine) -> None:
+    observed = datetime.now(UTC)
+    revised_at = observed + timedelta(seconds=1)
+    token = uuid4().hex
+    company = CompanyVersion(
+        company_id=f"integration.company.{token}",
+        legal_name="PostgreSQL Integration Company Ltd.",
+        hebrew_name=None,
+        english_name="PostgreSQL Integration Company Ltd.",
+        aliases=(f"PG-{token}",),
+        listings=(Listing(f"PG{token[:4]}", "XTAE", observed),),
+        isin=None,
+        sector_id="sector.technology",
+        industry_id=None,
+        domicile="IL",
+        status=CompanyStatus.ACTIVE,
+        dual_listed=False,
+        identifiers=(("TEST", token),),
+        provenance=("postgres-integration-test",),
+        valid_from=observed,
+        valid_until=None,
+        observed_at=observed,
+        version=1,
+    )
+    digest1 = hashlib.sha256(f"filing-{token}".encode()).hexdigest()
+    digest2 = hashlib.sha256(f"restatement-{token}".encode()).hexdigest()
+    with Session(migrated_engine) as session:
+        repository = SqlCompanyRepository(session)
+        repository.add_company(company)
+        evidence_ids: list[str] = []
+        for at, digest in ((observed, digest1), (revised_at, digest2)):
+            session.add(
+                ArtifactModel(
+                    sha256=digest,
+                    size_bytes=1,
+                    mime_type="application/json",
+                    relative_path=f"integration/{digest}",
+                    created_at=at,
+                )
+            )
+            source = Source(
+                uri=f"https://example.test/filing/{digest}",
+                kind=SourceKind.RESEARCH,
+                publisher="Integration filing authority",
+                published_at=at,
+                observed_at=at,
+                ingested_at=at,
+                trust=TrustLevel.AUTHORITATIVE,
+                content_digest=f"sha256:{digest}",
+                mime_type="application/json",
+            )
+            SqlSourceRepository(session).add(source)
+            evidence = Evidence(
+                claim=f"Integration filing {digest}",
+                source_ids=(source.provenance_id,),
+                observed_at=at,
+                excerpt_digest=f"sha256:{digest}",
+            )
+            SqlEvidenceRepository(session).add(evidence)
+            evidence_ids.append(evidence.provenance_id)
+        filing = Filing(
+            company_id=company.company_id,
+            filing_type=FilingType.ANNUAL_REPORT,
+            form_type="20-F",
+            accession_number=f"{token}-original",
+            source_uri=f"https://example.test/filing/{digest1}",
+            filed_at=observed,
+            first_observed_at=observed,
+            fiscal_period_start=observed.date() - timedelta(days=365),
+            fiscal_period_end=observed.date() - timedelta(days=1),
+            raw_artifact_sha256=digest1,
+            source_evidence_ids=(evidence_ids[0],),
+            parser_version="integration/1",
+        )
+        repository.add_filing(filing)
+        original = FundamentalObservation(
+            company_id=company.company_id,
+            filing_id=filing.filing_id,
+            metric=FundamentalType.REVENUE,
+            value="100",
+            currency="ILS",
+            unit="ILS million",
+            fiscal_period_start=filing.fiscal_period_start,
+            fiscal_period_end=filing.fiscal_period_end,
+            published_at=observed,
+            first_observed_at=observed,
+            source_evidence_ids=(evidence_ids[0],),
+            parser_version="integration/1",
+        )
+        repository.add_fundamental(original)
+        revised_filing = Filing(
+            company_id=company.company_id,
+            filing_type=FilingType.ANNUAL_REPORT,
+            form_type="20-F/A",
+            accession_number=f"{token}-amended",
+            source_uri=f"https://example.test/filing/{digest2}",
+            filed_at=revised_at,
+            first_observed_at=revised_at,
+            fiscal_period_start=filing.fiscal_period_start,
+            fiscal_period_end=filing.fiscal_period_end,
+            raw_artifact_sha256=digest2,
+            source_evidence_ids=(evidence_ids[1],),
+            parser_version="integration/1",
+            restates_filing_id=filing.filing_id,
+        )
+        repository.add_filing(revised_filing)
+        restated = FundamentalObservation(
+            company_id=company.company_id,
+            filing_id=revised_filing.filing_id,
+            metric=FundamentalType.REVENUE,
+            value="110",
+            currency="ILS",
+            unit="ILS million",
+            fiscal_period_start=filing.fiscal_period_start,
+            fiscal_period_end=filing.fiscal_period_end,
+            published_at=revised_at,
+            first_observed_at=revised_at,
+            source_evidence_ids=(evidence_ids[1],),
+            parser_version="integration/1",
+            restatement_status=RestatementStatus.RESTATED,
+            restates_observation_id=original.observation_id,
+        )
+        repository.add_fundamental(restated)
+        session.commit()
+        assert (
+            repository.get_company_at(company.company_id, observed - timedelta(microseconds=1))
+            is None
+        )
+        assert repository.get_company_at(company.company_id, observed) == company
+        assert repository.get_fundamentals(company.company_id, observed) == [original]
+        assert repository.get_fundamentals(company.company_id, revised_at) == [restated]
+
+    with pytest.raises(DBAPIError), migrated_engine.begin() as connection:
+        connection.execute(
+            text("UPDATE companies SET legal_name = 'mutated' WHERE company_version_id = :id"),
+            {"id": company.company_version_id},
+        )

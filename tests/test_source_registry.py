@@ -25,6 +25,7 @@ class SourceRegistryTests(unittest.TestCase):
                 "il.knesset",
                 "il.competition",
                 "il.tax",
+                "us.sec.edgar",
             },
         )
         self.assertTrue(DEFAULT_REGISTRY.get("il.boi").enabled)

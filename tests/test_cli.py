@@ -92,6 +92,30 @@ class CliTests(unittest.TestCase):
         self.assertEqual(result, 0)
         self.assertIn('"source_id": "il.boi"', output.getvalue())
 
+    def test_company_fundamentals_commands_are_registered(self) -> None:
+        parser = build_parser()
+        self.assertEqual(parser.parse_args(["company", "list"]).company_command, "list")
+        self.assertEqual(parser.parse_args(["company", "show", "nice"]).company_id, "nice")
+        self.assertEqual(
+            parser.parse_args(
+                [
+                    "fundamentals",
+                    "show",
+                    "nice",
+                    "--at",
+                    "2025-01-02T12:00:00+00:00",
+                ]
+            ).company_id,
+            "nice",
+        )
+        self.assertEqual(parser.parse_args(["filings", "list", "nice"]).company_id, "nice")
+        self.assertEqual(
+            parser.parse_args(
+                ["exposures", "show", "nice", "--at", "2025-01-02T12:00:00+00:00"]
+            ).company_id,
+            "nice",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

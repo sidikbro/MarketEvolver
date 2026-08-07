@@ -258,5 +258,26 @@ DEFAULT_REGISTRY = SourceRegistry(
             enabled=False,
             revision_notes="Circulars and implementation dates may change.",
         ),
+        SourceDefinition(
+            source_id="us.sec.edgar",
+            name="SEC EDGAR",
+            source_type=RegistrySourceType.REGULATOR,
+            geography="US",
+            authority_tier=AuthorityTier.OFFICIAL_PRIMARY,
+            base_uri="https://data.sec.gov",
+            expected_content_types=("application/json",),
+            timezone="America/New_York",
+            ingestion_method=IngestionMethod.JSON_API,
+            enabled=True,
+            revision_notes=(
+                "Amendments and corrected XBRL facts remain separate filing observations."
+            ),
+            language=("en",),
+            publisher_identity="U.S. Securities and Exchange Commission",
+            owner_organization="U.S. Government",
+            publication_timestamp_semantics="SEC filing date and accession metadata.",
+            access_notes="Requires a descriptive User-Agent with contact information.",
+            storage_constraints="Retain official filing metadata and facts with provenance.",
+        ),
     )
 )

@@ -520,6 +520,102 @@ class GovernmentCandidateModel(Base):
     expectation_status: Mapped[str] = mapped_column(String(16), nullable=False)
 
 
+class CompanyModel(Base):
+    __tablename__ = "companies"
+
+    company_version_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    company_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    legal_name: Mapped[str] = mapped_column(String(512), nullable=False)
+    hebrew_name: Mapped[str | None] = mapped_column(String(512))
+    english_name: Mapped[str] = mapped_column(String(512), nullable=False)
+    aliases: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    listings: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False)
+    isin: Mapped[str | None] = mapped_column(String(32), index=True)
+    sector_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    industry_id: Mapped[str | None] = mapped_column(String(128))
+    domicile: Mapped[str] = mapped_column(String(8), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    dual_listed: Mapped[bool] = mapped_column(nullable=False)
+    identifiers: Mapped[list[list[str]]] = mapped_column(JSON, nullable=False)
+    provenance: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    valid_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    valid_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class FilingModel(Base):
+    __tablename__ = "filings"
+
+    filing_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    company_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    filing_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    form_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    accession_number: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    source_uri: Mapped[str] = mapped_column(String(2048), nullable=False)
+    filed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    first_observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    fiscal_period_start: Mapped[date] = mapped_column(Date, nullable=False)
+    fiscal_period_end: Mapped[date] = mapped_column(Date, nullable=False)
+    raw_artifact_sha256: Mapped[str] = mapped_column(ForeignKey("artifacts.sha256"), nullable=False)
+    source_evidence_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    parser_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    restates_filing_id: Mapped[str | None] = mapped_column(ForeignKey("filings.filing_id"))
+
+
+class FundamentalModel(Base):
+    __tablename__ = "fundamentals"
+
+    observation_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    company_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    filing_id: Mapped[str] = mapped_column(ForeignKey("filings.filing_id"), nullable=False)
+    metric: Mapped[str] = mapped_column(String(32), nullable=False)
+    value: Mapped[str] = mapped_column(String(128), nullable=False)
+    currency: Mapped[str | None] = mapped_column(String(8))
+    unit: Mapped[str] = mapped_column(String(64), nullable=False)
+    fiscal_period_start: Mapped[date] = mapped_column(Date, nullable=False)
+    fiscal_period_end: Mapped[date] = mapped_column(Date, nullable=False)
+    published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    first_observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    source_evidence_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    parser_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    restatement_status: Mapped[str] = mapped_column(String(16), nullable=False)
+    restates_observation_id: Mapped[str | None] = mapped_column(
+        ForeignKey("fundamentals.observation_id")
+    )
+    dimensions: Mapped[list[list[str]]] = mapped_column(JSON, nullable=False)
+
+
+class DerivedFundamentalModel(Base):
+    __tablename__ = "derived_fundamentals"
+
+    derived_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    company_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    metric: Mapped[str] = mapped_column(String(32), nullable=False)
+    value: Mapped[str] = mapped_column(String(128), nullable=False)
+    unit: Mapped[str] = mapped_column(String(64), nullable=False)
+    fiscal_period_end: Mapped[date] = mapped_column(Date, nullable=False)
+    first_observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    input_observation_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    formula_version: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
+class CompanyExposureModel(Base):
+    __tablename__ = "company_exposures"
+
+    exposure_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    company_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    exposure_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    target: Mapped[str] = mapped_column(String(128), nullable=False)
+    value: Mapped[str | None] = mapped_column(String(128))
+    unit: Mapped[str | None] = mapped_column(String(64))
+    valid_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    valid_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    first_observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    source_evidence_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
 def _forbid_mutation(_mapper: Any, _connection: Any, target: Any) -> None:
     raise ImmutableRecordError(
         f"{type(target).__name__} {getattr(target, 'provenance_id', '')} is immutable"
@@ -545,6 +641,11 @@ for _model in (
     GovernmentActionModel,
     GovernmentCandidateModel,
     GovernmentTransitionModel,
+    CompanyModel,
+    FilingModel,
+    FundamentalModel,
+    DerivedFundamentalModel,
+    CompanyExposureModel,
     SourceModel,
     EvidenceModel,
     EventModel,
