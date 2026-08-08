@@ -34,6 +34,13 @@ from market_evolver.storage.models import (
     EvidenceModel,
     ExperimentRegistryModel,
     ExperimentSpecificationModel,
+    ExpertAssessmentModel,
+    ExpertComparisonModel,
+    ExpertDefinitionModel,
+    ExpertRoutingModel,
+    ExpertScorecardModel,
+    ExpertSessionModel,
+    ExpertToolAuditModel,
     FilingModel,
     FundamentalModel,
     FusionReputationModel,
@@ -186,6 +193,14 @@ class StorageTelemetry:
     paper_snapshots: int = 0
     paper_risk_triggers: int = 0
     paper_halt_events: int = 0
+    expert_sessions: int = 0
+    expert_routing_decisions: int = 0
+    expert_tools_requested: int = 0
+    expert_tool_denials: int = 0
+    expert_scorecards: int = 0
+    expert_comparisons: int = 0
+    expert_sessions_by_day: tuple[DailyMeasurement, ...] = ()
+    expert_sessions_by_domain: dict[str, int] | None = None
 
 
 def measure_storage(session: Session) -> StorageTelemetry:
@@ -279,6 +294,13 @@ def measure_storage(session: Session) -> StorageTelemetry:
             PaperExecutionDecisionModel,
             PaperFillModel,
             PaperAuditModel,
+            ExpertDefinitionModel,
+            ExpertToolAuditModel,
+            ExpertSessionModel,
+            ExpertAssessmentModel,
+            ExpertRoutingModel,
+            ExpertScorecardModel,
+            ExpertComparisonModel,
         )
     }
     raw_bytes = int(
@@ -496,6 +518,13 @@ def measure_storage(session: Session) -> StorageTelemetry:
     for backtest in backtest_rows:
         backtest_day = backtest.started_at.date()
         backtest_days[backtest_day] = backtest_days.get(backtest_day, 0) + 1
+    expert_session_rows = tuple(session.scalars(select(ExpertSessionModel)))
+    expert_days: dict[date, int] = {}
+    expert_domains: dict[str, int] = {}
+    for row in expert_session_rows:
+        session_day = row.started_at.date()
+        expert_days[session_day] = expert_days.get(session_day, 0) + 1
+        expert_domains[row.domain] = expert_domains.get(row.domain, 0) + 1
     return StorageTelemetry(
         raw_artifact_bytes=raw_bytes,
         database_record_counts=counts,
@@ -610,6 +639,21 @@ def measure_storage(session: Session) -> StorageTelemetry:
             )
             or 0
         ),
+        expert_sessions=_count(session, ExpertSessionModel),
+        expert_routing_decisions=_count(session, ExpertRoutingModel),
+        expert_tools_requested=_count(session, ExpertToolAuditModel),
+        expert_tool_denials=int(
+            session.scalar(
+                select(func.count())
+                .select_from(ExpertToolAuditModel)
+                .where(ExpertToolAuditModel.decision == "denied")
+            )
+            or 0
+        ),
+        expert_scorecards=_count(session, ExpertScorecardModel),
+        expert_comparisons=_count(session, ExpertComparisonModel),
+        expert_sessions_by_day=_measurements(expert_days),
+        expert_sessions_by_domain=dict(sorted(expert_domains.items())),
     )
 
 

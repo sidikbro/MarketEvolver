@@ -1567,6 +1567,82 @@ class PaperAuditModel(Base):
     payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
 
 
+class ExpertDefinitionModel(Base):
+    __tablename__ = "expert_definitions"
+    definition_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    expert_id: Mapped[str] = mapped_column(String(96), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False, index=True)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    revision_of: Mapped[str | None] = mapped_column(String(96))
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+class ExpertToolAuditModel(Base):
+    __tablename__ = "expert_tool_audits"
+    audit_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    expert_definition_id: Mapped[str] = mapped_column(
+        ForeignKey("expert_definitions.definition_id"), nullable=False
+    )
+    session_id: Mapped[str] = mapped_column(String(96), nullable=False, index=True)
+    requested_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    decision: Mapped[str] = mapped_column(String(16), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+class ExpertSessionModel(Base):
+    __tablename__ = "expert_sessions"
+    session_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    expert_definition_id: Mapped[str] = mapped_column(
+        ForeignKey("expert_definitions.definition_id"), nullable=False
+    )
+    cutoff: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False)
+    domain: Mapped[str] = mapped_column(String(96), nullable=False, index=True)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+class ExpertAssessmentModel(Base):
+    __tablename__ = "expert_assessments"
+    assessment_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    session_id: Mapped[str] = mapped_column(
+        ForeignKey("expert_sessions.session_id"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+class ExpertRoutingModel(Base):
+    __tablename__ = "expert_routing_decisions"
+    routing_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    cutoff: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+class ExpertScorecardModel(Base):
+    __tablename__ = "expert_scorecards"
+    scorecard_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    expert_definition_id: Mapped[str] = mapped_column(
+        ForeignKey("expert_definitions.definition_id"), nullable=False
+    )
+    cutoff: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+class ExpertComparisonModel(Base):
+    __tablename__ = "expert_comparisons"
+    comparison_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
 def _forbid_mutation(_mapper: Any, _connection: Any, target: Any) -> None:
     raise ImmutableRecordError(
         f"{type(target).__name__} {getattr(target, 'provenance_id', '')} is immutable"
@@ -1655,6 +1731,13 @@ for _model in (
     PaperExecutionDecisionModel,
     PaperFillModel,
     PaperAuditModel,
+    ExpertDefinitionModel,
+    ExpertToolAuditModel,
+    ExpertSessionModel,
+    ExpertAssessmentModel,
+    ExpertRoutingModel,
+    ExpertScorecardModel,
+    ExpertComparisonModel,
     SourceModel,
     EvidenceModel,
     EventModel,

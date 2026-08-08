@@ -40,6 +40,13 @@ from market_evolver.experiment.schemas import (
     SignalObservation,
     TestSetAccess,
 )
+from market_evolver.expert.evaluation import BENCHMARK_CASES
+from market_evolver.expert.evaluation import transition as transition_expert
+from market_evolver.expert.repository import SqlExpertRepository
+from market_evolver.expert.routing import panel_route
+from market_evolver.expert.routing import route as route_expert
+from market_evolver.expert.schemas import ExpertStatus
+from market_evolver.expert.seed import FIXED_EXPERTS
 from market_evolver.fusion.benchmark import run_false_rumor_benchmark
 from market_evolver.fusion.engine import calculate_reputation, current_corroboration_state
 from market_evolver.fusion.repository import SqlFusionRepository
@@ -380,6 +387,31 @@ def build_parser() -> argparse.ArgumentParser:
         command.add_argument("portfolio_id")
         if operation == "step":
             command.add_argument("--at", required=True)
+    expert = commands.add_parser("expert")
+    expert_commands = expert.add_subparsers(dest="expert_command", required=True)
+    expert_commands.add_parser("seed")
+    expert_commands.add_parser("list")
+    expert_show = expert_commands.add_parser("show")
+    expert_show.add_argument("expert_id")
+    expert_route = expert_commands.add_parser("route")
+    expert_route.add_argument("subject")
+    expert_route.add_argument("--tags", required=True)
+    expert_route.add_argument("--geography", default="IL")
+    expert_route.add_argument("--at", required=True)
+    expert_panel = expert_commands.add_parser("panel")
+    expert_panel.add_argument("subject")
+    expert_panel.add_argument("--tags", required=True)
+    expert_panel.add_argument("--geography", default="IL")
+    expert_panel.add_argument("--at", required=True)
+    expert_run = expert_commands.add_parser("run")
+    expert_run.add_argument("expert_id")
+    expert_run.add_argument("--at", required=True)
+    expert_score = expert_commands.add_parser("scorecard")
+    expert_score.add_argument("expert_id")
+    expert_commands.add_parser("benchmark")
+    for operation in ("approve", "suspend"):
+        item = expert_commands.add_parser(operation)
+        item.add_argument("expert_id")
     return parser
 
 
@@ -491,6 +523,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _walkforward_command(args, session)
         if args.command == "paper":
             return _paper_command(args, session)
+        if args.command == "expert":
+            return _expert_command(args, session)
         telemetry = measure_storage(session)
         print(
             json.dumps(
@@ -1869,6 +1903,98 @@ def _paper_command(args: argparse.Namespace, session: Session) -> int:
     )
     session.commit()
     print(target.value)
+    return 0
+
+
+def _expert_command(args: argparse.Namespace, session: Session) -> int:
+    repo = SqlExpertRepository(session)
+    if args.expert_command == "seed":
+        inserted = sum(repo.add_definition(item) for item in FIXED_EXPERTS)
+        session.commit()
+        print(json.dumps({"inserted": inserted, "fixed": len(FIXED_EXPERTS)}))
+        return 0
+    if args.expert_command == "benchmark":
+        print(
+            json.dumps(
+                [
+                    {"case_id": case, "domain": domain, "expected": expected}
+                    for case, domain, expected in BENCHMARK_CASES
+                ],
+                indent=2,
+            )
+        )
+        return 0
+    if args.expert_command == "list":
+        print(
+            json.dumps(
+                [
+                    {
+                        "expert_id": item.expert_id,
+                        "name": item.name,
+                        "domain": item.domain,
+                        "status": item.status.value,
+                        "version": item.version,
+                    }
+                    for item in repo.list_latest()
+                ],
+                indent=2,
+            )
+        )
+        return 0
+    item = repo.latest(args.expert_id) if hasattr(args, "expert_id") else None
+    if args.expert_command in {"show", "scorecard", "run", "approve", "suspend"} and item is None:
+        raise GovernanceViolation("expert definition does not exist")
+    if args.expert_command in {"show", "scorecard", "run", "approve", "suspend"}:
+        assert item is not None
+    if args.expert_command == "show":
+        assert item is not None
+        print(json.dumps(asdict(item), default=str, indent=2))
+        return 0
+    if args.expert_command == "scorecard":
+        assert item is not None
+        from market_evolver.storage.models import ExpertScorecardModel
+
+        rows = tuple(
+            session.scalars(
+                select(ExpertScorecardModel)
+                .where(ExpertScorecardModel.expert_definition_id == item.definition_id)
+                .order_by(ExpertScorecardModel.cutoff.desc())
+            )
+        )
+        print(json.dumps([row.payload for row in rows], indent=2))
+        return 0
+    if args.expert_command == "run":
+        assert item is not None
+        if item.status is not ExpertStatus.APPROVED:
+            raise GovernanceViolation("only approved experts may be run")
+        print(
+            json.dumps(
+                {
+                    "expert_id": item.expert_id,
+                    "cutoff": _parse_timestamp(args.at).isoformat(),
+                    "status": "context/provider must be explicitly supplied",
+                }
+            )
+        )
+        return 0
+    if args.expert_command == "approve":
+        raise GovernanceViolation("approval requires a persisted passing benchmark scorecard")
+    if args.expert_command == "suspend":
+        assert item is not None
+        revised = transition_expert(item, ExpertStatus.SUSPENDED, datetime.now(UTC))
+        repo.add_definition(revised)
+        session.commit()
+        print(revised.definition_id)
+        return 0
+    experts = repo.list_latest()
+    cutoff = _parse_timestamp(args.at)
+    tags = tuple(part.strip() for part in args.tags.split(",") if part.strip())
+    decision = (panel_route if args.expert_command == "panel" else route_expert)(
+        args.subject, cutoff, experts, tags=tags, geography=args.geography
+    )
+    repo.add_routing(decision)
+    session.commit()
+    print(json.dumps(asdict(decision), default=str))
     return 0
 
 

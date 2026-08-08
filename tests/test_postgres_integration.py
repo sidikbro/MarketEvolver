@@ -49,6 +49,9 @@ from market_evolver.experiment.schemas import (
 from market_evolver.experiment.schemas import (
     TestSetAccess as AccessAudit,
 )
+from market_evolver.expert.repository import SqlExpertRepository
+from market_evolver.expert.schemas import ExpertStatus
+from market_evolver.expert.seed import EXPERTS_BY_ID
 from market_evolver.fusion.engine import calculate_reputation
 from market_evolver.fusion.repository import SqlFusionRepository
 from market_evolver.fusion.schemas import (
@@ -152,9 +155,9 @@ def migrated_engine(postgres_url: str):
         os.environ["MARKET_EVOLVER_DATABASE_URL"] = previous
 
 
-def test_migrations_reach_0016(migrated_engine) -> None:
+def test_migrations_reach_0017(migrated_engine) -> None:
     with migrated_engine.connect() as connection:
-        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0016"
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0017"
 
 
 def test_telegram_revision_cutoff_and_append_only(migrated_engine, tmp_path: Path) -> None:
@@ -1048,4 +1051,20 @@ def test_paper_portfolio_snapshot_and_database_append_only(migrated_engine) -> N
         connection.execute(
             text("UPDATE paper_account_snapshots SET account='{}' WHERE snapshot_id=:id"),
             {"id": snapshot_id},
+        )
+
+
+def test_expert_definition_and_database_append_only(migrated_engine) -> None:
+    from dataclasses import replace
+
+    expert = replace(EXPERTS_BY_ID["expert.banking_macro"], status=ExpertStatus.APPROVED)
+    with Session(migrated_engine) as session:
+        repo = SqlExpertRepository(session)
+        repo.add_definition(expert)
+        session.commit()
+        assert repo.latest(expert.expert_id) == expert
+    with pytest.raises(DBAPIError), migrated_engine.begin() as connection:
+        connection.execute(
+            text("UPDATE expert_definitions SET status='suspended' WHERE definition_id=:id"),
+            {"id": expert.definition_id},
         )
