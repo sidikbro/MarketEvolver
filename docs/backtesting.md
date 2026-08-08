@@ -36,3 +36,9 @@ Known limitations: v0.16 uses daily OHLCV rather than an order book, stop/take
 levels are checked on available bars, multi-position allocation is deliberately
 simple, walk-forward output is a deterministic window schedule, and exchange
 calendars are only as complete as the ingested session dataset.
+# Paper continuation
+
+Validated v0.16 experiments may emit admitted signals into v0.17 paper portfolios. The paper clock
+uses the same next-session, commission, spread, slippage, FX, and share-fraction semantics, while
+persisting each pre-execution risk decision. Historical replay and forward paper runs therefore use
+one causal boundary; neither may revise an earlier decision.

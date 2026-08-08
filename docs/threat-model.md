@@ -238,3 +238,11 @@ allowlist cannot fully reconcile. TASE/MAYA remains disabled until its access,
 publication-time, and correction semantics are reviewed. Derived values are
 mechanical transformations of compatible observations, not assessments of
 quality, comparability, valuation, or future performance.
+# v0.17 paper-runtime threats
+
+Raw model output, revoked strategies, stale or future observations, invalidated evidence, duplicated
+signals, order floods, concentration, cash exhaustion, dominant fees, impossible prices, missing
+sessions, corporate-action ambiguity, and corrupted NAV all fail closed. Long-only schemas and fill
+reconciliation prohibit synthetic shorts and negative cash. Risk relaxation and kill-state recovery
+require explicit audited operator action. The runtime contains no broker credentials or provider
+imports, so a research-plane compromise cannot grant execution permission.

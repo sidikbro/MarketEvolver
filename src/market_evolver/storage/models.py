@@ -1479,6 +1479,94 @@ class ExperimentRegistryModel(Base):
     reported_experiments: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
+class PaperRiskPolicyModel(Base):
+    __tablename__ = "paper_risk_policies"
+    policy_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    name: Mapped[str] = mapped_column(String(256), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    limits: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    provenance: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+
+
+class PaperPortfolioModel(Base):
+    __tablename__ = "paper_portfolios"
+    portfolio_version_id: Mapped[str] = mapped_column(String(160), primary_key=True)
+    portfolio_id: Mapped[str] = mapped_column(String(96), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(256), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    configuration: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    revision_of: Mapped[str | None] = mapped_column(String(160))
+
+
+class PaperAccountSnapshotModel(Base):
+    __tablename__ = "paper_account_snapshots"
+    snapshot_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    portfolio_id: Mapped[str] = mapped_column(String(96), nullable=False, index=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    account: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+class PaperSignalModel(Base):
+    __tablename__ = "paper_signals"
+    signal_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    portfolio_id: Mapped[str] = mapped_column(String(96), nullable=False, index=True)
+    generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+class PaperOrderModel(Base):
+    __tablename__ = "paper_orders"
+    candidate_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    signal_id: Mapped[str] = mapped_column(ForeignKey("paper_signals.signal_id"), nullable=False)
+    portfolio_id: Mapped[str] = mapped_column(String(96), nullable=False, index=True)
+    generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+class PaperRiskEvaluationModel(Base):
+    __tablename__ = "paper_risk_evaluations"
+    evaluation_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    candidate_id: Mapped[str] = mapped_column(
+        ForeignKey("paper_orders.candidate_id"), nullable=False
+    )
+    portfolio_id: Mapped[str] = mapped_column(String(96), nullable=False, index=True)
+    evaluated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    action: Mapped[str] = mapped_column(String(24), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+class PaperExecutionDecisionModel(Base):
+    __tablename__ = "paper_execution_decisions"
+    decision_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    candidate_id: Mapped[str] = mapped_column(
+        ForeignKey("paper_orders.candidate_id"), nullable=False
+    )
+    decided_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+class PaperFillModel(Base):
+    __tablename__ = "paper_fills"
+    fill_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    decision_id: Mapped[str] = mapped_column(
+        ForeignKey("paper_execution_decisions.decision_id"), nullable=False
+    )
+    portfolio_id: Mapped[str] = mapped_column(String(96), nullable=False, index=True)
+    filled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+class PaperAuditModel(Base):
+    __tablename__ = "paper_audit_journal"
+    audit_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    portfolio_id: Mapped[str] = mapped_column(String(96), nullable=False, index=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    kind: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
 def _forbid_mutation(_mapper: Any, _connection: Any, target: Any) -> None:
     raise ImmutableRecordError(
         f"{type(target).__name__} {getattr(target, 'provenance_id', '')} is immutable"
@@ -1558,6 +1646,15 @@ for _model in (
     BacktestResultModel,
     TestSetAccessModel,
     ExperimentRegistryModel,
+    PaperRiskPolicyModel,
+    PaperPortfolioModel,
+    PaperAccountSnapshotModel,
+    PaperSignalModel,
+    PaperOrderModel,
+    PaperRiskEvaluationModel,
+    PaperExecutionDecisionModel,
+    PaperFillModel,
+    PaperAuditModel,
     SourceModel,
     EvidenceModel,
     EventModel,

@@ -63,6 +63,15 @@ from market_evolver.storage.models import (
     NewsItemModel,
     NormalizedObservationModel,
     OutcomeEvaluationModel,
+    PaperAccountSnapshotModel,
+    PaperAuditModel,
+    PaperExecutionDecisionModel,
+    PaperFillModel,
+    PaperOrderModel,
+    PaperPortfolioModel,
+    PaperRiskEvaluationModel,
+    PaperRiskPolicyModel,
+    PaperSignalModel,
     ProviderCallModel,
     RawIngestionModel,
     ReplayCaseModel,
@@ -171,6 +180,12 @@ class StorageTelemetry:
     rejected_experiments: int = 0
     leakage_failures: int = 0
     test_set_accesses: int = 0
+    paper_signals_received: int = 0
+    paper_orders_proposed: int = 0
+    paper_fills: int = 0
+    paper_snapshots: int = 0
+    paper_risk_triggers: int = 0
+    paper_halt_events: int = 0
 
 
 def measure_storage(session: Session) -> StorageTelemetry:
@@ -255,6 +270,15 @@ def measure_storage(session: Session) -> StorageTelemetry:
             GeopoliticalCandidateReviewModel,
             GeopoliticalTransmissionModel,
             GeopoliticalCorroborationModel,
+            PaperRiskPolicyModel,
+            PaperPortfolioModel,
+            PaperAccountSnapshotModel,
+            PaperSignalModel,
+            PaperOrderModel,
+            PaperRiskEvaluationModel,
+            PaperExecutionDecisionModel,
+            PaperFillModel,
+            PaperAuditModel,
         )
     }
     raw_bytes = int(
@@ -566,6 +590,26 @@ def measure_storage(session: Session) -> StorageTelemetry:
             for item in backtest_rows
         ),
         test_set_accesses=_count(session, TestSetAccessModel),
+        paper_signals_received=_count(session, PaperSignalModel),
+        paper_orders_proposed=_count(session, PaperOrderModel),
+        paper_fills=_count(session, PaperFillModel),
+        paper_snapshots=_count(session, PaperAccountSnapshotModel),
+        paper_risk_triggers=int(
+            session.scalar(
+                select(func.count())
+                .select_from(PaperRiskEvaluationModel)
+                .where(PaperRiskEvaluationModel.action != "approved")
+            )
+            or 0
+        ),
+        paper_halt_events=int(
+            session.scalar(
+                select(func.count())
+                .select_from(PaperRiskEvaluationModel)
+                .where(PaperRiskEvaluationModel.action == "portfolio_halted")
+            )
+            or 0
+        ),
     )
 
 

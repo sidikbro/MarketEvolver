@@ -94,6 +94,10 @@ from market_evolver.news.schemas import (
     ExtractionStatus,
     NewsItem,
 )
+from market_evolver.paper.policy import NIS_2000_POLICY
+from market_evolver.paper.repository import SqlPaperRepository
+from market_evolver.paper.runtime import PaperRuntime
+from market_evolver.paper.schemas import AllocationPolicy, PaperPortfolio
 from market_evolver.replay.engine import ReplayEngine
 from market_evolver.replay.repositories import SqlReplayRepository
 from market_evolver.replay.schemas import (
@@ -148,9 +152,9 @@ def migrated_engine(postgres_url: str):
         os.environ["MARKET_EVOLVER_DATABASE_URL"] = previous
 
 
-def test_migrations_reach_0015(migrated_engine) -> None:
+def test_migrations_reach_0016(migrated_engine) -> None:
     with migrated_engine.connect() as connection:
-        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0015"
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0016"
 
 
 def test_telegram_revision_cutoff_and_append_only(migrated_engine, tmp_path: Path) -> None:
@@ -1012,4 +1016,36 @@ def test_social_source_append_only(migrated_engine) -> None:
         connection.execute(
             text("UPDATE social_sources SET display_name='mutated' WHERE source_id=:id"),
             {"id": source_id},
+        )
+
+
+def test_paper_portfolio_snapshot_and_database_append_only(migrated_engine) -> None:
+    now = datetime.now(UTC)
+    portfolio_id = f"paper:{uuid4().hex}"
+    with Session(migrated_engine) as session:
+        repo = SqlPaperRepository(session)
+        repo.add_policy(NIS_2000_POLICY)
+        portfolio = PaperPortfolio(
+            portfolio_id,
+            "Postgres paper",
+            "ILS",
+            "2000",
+            now,
+            (f"experiment:{uuid4().hex}",),
+            (),
+            "asset.index.ta35",
+            AllocationPolicy.FIXED_NOTIONAL,
+            NIS_2000_POLICY.policy_id,
+            "next-open-v1",
+        )
+        repo.add_portfolio(portfolio)
+        snapshot = PaperRuntime.initial_snapshot(portfolio)
+        repo.add_snapshot(snapshot)
+        session.commit()
+        assert repo.counts(portfolio_id)["paper_account_snapshots"] == 1
+        snapshot_id = snapshot.snapshot_id
+    with pytest.raises(DBAPIError), migrated_engine.begin() as connection:
+        connection.execute(
+            text("UPDATE paper_account_snapshots SET account='{}' WHERE snapshot_id=:id"),
+            {"id": snapshot_id},
         )

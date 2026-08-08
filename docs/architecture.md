@@ -324,3 +324,12 @@ Recommendations are data in the research plane. `RuntimePermissions` are
 host-supplied data in a separate capability plane. Neither a model nor a lab can
 grant itself permissions, and the current configuration loader rejects any
 execution or broker capability.
+# v0.17 paper execution boundary
+
+The simulation-only runtime adds a strict boundary beneath research:
+
+`Research Plane → Validated Signal Boundary → Deterministic Risk Governor → Paper Runtime`
+
+The paper package has no provider/LLM imports. PostgreSQL holds immutable policies, portfolio
+versions, order state, fills, risk decisions, snapshots, and operator journal records. Parquet and
+DuckDB hold derived NAV history only. No broker or live execution interface exists.

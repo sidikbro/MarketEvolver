@@ -77,6 +77,15 @@ from market_evolver.observatory.repositories import (
     observatory_summary,
 )
 from market_evolver.observatory.schemas import CanonicalEvent, EventStatus
+from market_evolver.paper.policy import NIS_2000_POLICY
+from market_evolver.paper.repository import SqlPaperRepository
+from market_evolver.paper.runtime import PaperRuntime
+from market_evolver.paper.schemas import (
+    AllocationPolicy,
+    AuditRecord,
+    PaperPortfolio,
+    PortfolioStatus,
+)
 from market_evolver.replay.benchmark import BenchmarkRunner, benchmark_metrics
 from market_evolver.replay.engine import ReplayEngine
 from market_evolver.replay.repositories import SqlReplayRepository
@@ -358,6 +367,19 @@ def build_parser() -> argparse.ArgumentParser:
     walkforward_commands = walkforward.add_subparsers(dest="walkforward_command", required=True)
     walkforward_run = walkforward_commands.add_parser("run")
     walkforward_run.add_argument("experiment_id")
+    paper = commands.add_parser("paper")
+    paper_commands = paper.add_subparsers(dest="paper_command", required=True)
+    paper_create = paper_commands.add_parser("create")
+    paper_create.add_argument("portfolio_id")
+    paper_create.add_argument("--name", required=True)
+    paper_create.add_argument("--experiment", required=True)
+    paper_create.add_argument("--benchmark", required=True)
+    paper_create.add_argument("--initial-cash", default="2000")
+    for operation in ("start", "step", "status", "positions", "risk", "pause", "resume", "stop"):
+        command = paper_commands.add_parser(operation)
+        command.add_argument("portfolio_id")
+        if operation == "step":
+            command.add_argument("--at", required=True)
     return parser
 
 
@@ -467,6 +489,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _backtest_command(args, config, session)
         if args.command == "walkforward":
             return _walkforward_command(args, session)
+        if args.command == "paper":
+            return _paper_command(args, session)
         telemetry = measure_storage(session)
         print(
             json.dumps(
@@ -1762,6 +1786,89 @@ def _walkforward_command(args: argparse.Namespace, session: Session) -> int:
         )
     )
     print(json.dumps([asdict(item) for item in walk_forward_windows(points, 2, 2, 2)]))
+    return 0
+
+
+def _paper_command(args: argparse.Namespace, session: Session) -> int:
+    repo = SqlPaperRepository(session)
+    now = datetime.now(UTC)
+    if args.paper_command == "create":
+        experiment = SqlExperimentRepository(session).specification(args.experiment)
+        if experiment is None or experiment.status not in {
+            ExperimentStatus.VALIDATED,
+            ExperimentStatus.RUNNING,
+        }:
+            raise GovernanceViolation("paper portfolio requires a validated experiment")
+        repo.add_policy(NIS_2000_POLICY)
+        portfolio = PaperPortfolio(
+            args.portfolio_id,
+            args.name,
+            "ILS",
+            args.initial_cash,
+            now,
+            (experiment.experiment_id,),
+            (),
+            args.benchmark,
+            AllocationPolicy.FIXED_NOTIONAL,
+            NIS_2000_POLICY.policy_id,
+            "v0.16-next-session",
+        )
+        repo.add_portfolio(portfolio)
+        repo.add_snapshot(PaperRuntime.initial_snapshot(portfolio))
+        repo.add_audit(AuditRecord(portfolio.portfolio_id, now, "create", "cli-operator", ()))
+        session.commit()
+        print(portfolio.portfolio_id)
+        return 0
+    row = repo.latest_portfolio_row(args.portfolio_id)
+    if row is None:
+        raise GovernanceViolation("paper portfolio does not exist")
+    if args.paper_command in {"status", "positions", "risk"}:
+        output: dict[str, object] = {
+            "portfolio_id": row.portfolio_id,
+            "status": row.status,
+            "version": row.version,
+            "records": repo.counts(row.portfolio_id),
+        }
+        if args.paper_command == "risk":
+            output["policy"] = asdict(NIS_2000_POLICY)
+        print(json.dumps(output, default=str, indent=2))
+        return 0
+    if args.paper_command == "step":
+        at = _parse_timestamp(args.at)
+        repo.add_audit(
+            AuditRecord(
+                row.portfolio_id,
+                at,
+                "step",
+                "cli-operator",
+                (("mode", "explicit-forward-or-replay"),),
+            )
+        )
+        session.commit()
+        print(
+            json.dumps(
+                {
+                    "portfolio_id": row.portfolio_id,
+                    "advanced_to": at.isoformat(),
+                    "fills": 0,
+                    "note": "no admitted signals supplied",
+                }
+            )
+        )
+        return 0
+    target = {
+        "start": PortfolioStatus.ACTIVE,
+        "resume": PortfolioStatus.ACTIVE,
+        "pause": PortfolioStatus.PAUSED,
+        "stop": PortfolioStatus.STOPPED,
+    }[args.paper_command]
+    repo.transition(
+        row.portfolio_id,
+        target,
+        AuditRecord(row.portfolio_id, now, args.paper_command, "cli-operator", ()),
+    )
+    session.commit()
+    print(target.value)
     return 0
 
 
