@@ -1,5 +1,16 @@
 # Threat model
 
+## Backtest leakage and overfitting
+
+Threats include same-bar execution, after-hours backdating, revised prices,
+future corroboration/fundamentals/corporate actions, benchmark mismatch,
+survivorship bias, silent missing-data interpolation, parameter changes after
+test access, underestimated small-account costs, and repeated hypothesis search.
+Typed timestamped signals, next-session rules, cutoff-aware Parquet reads,
+explicit exclusions/costs, immutable specs/results, append-only test access, and
+the hypothesis registry mitigate these risks. They do not eliminate selection
+bias or prove deployability.
+
 ## Fusion and reputation poisoning
 
 Attackers may amplify one claim through copied, forwarded, syndicated, or

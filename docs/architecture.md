@@ -1,5 +1,11 @@
 # Architecture
 
+Version 0.16 adds an experiment boundary after governed research and before any
+hypothetical market action. Immutable hypotheses feed typed signal observations;
+validated experiment specs feed a long-only historical simulator; immutable
+results and test-access audits feed evaluation. No component exposes broker or
+live-order permissions.
+
 Version 0.15 adds an append-only fusion domain between source-specific labs and
 research context. Source records remain authoritative for their own provenance;
 unified claims reference them without overwriting them. Deterministic matching,

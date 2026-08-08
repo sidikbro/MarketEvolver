@@ -1,5 +1,10 @@
 # Historical research replay
 
+Backtest replay consumes the same cutoff-correct market catalog and persists a
+manifest of every Parquet hash, source version, parameter hash, code version,
+and seed. Experiment signals must carry their own observation time and
+provenance. Test results never rewrite the committed experiment specification.
+
 Fusion replay exposes only claim versions, lineage, corroboration, resolutions,
 contradictions, and reputation snapshots observed by the cutoff. Later official
 confirmation and later source-performance knowledge never alter the historical

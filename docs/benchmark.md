@@ -1,5 +1,11 @@
 # Research replay benchmark
 
+Version 0.16 adds seven non-research baselines plus a false-rumor safety fixture
+comparing first social observation, independent corroboration, official
+confirmation, and no trade. Reports expose delay cost, false-positive exposure,
+return, and drawdown separately; they do not label a simulation as profit or an
+investment recommendation.
+
 ## Versioned cases
 
 `ReplayCase` fixes the entity/assets, cutoff, horizon, evidence-manifest ID,

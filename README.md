@@ -1,8 +1,8 @@
 # MarketEvolver
 
-MarketEvolver is a governed financial-market research laboratory. Version 0.15
-adds cutoff-aware cross-source evidence fusion, contradiction resolution,
-independence analysis, and domain-specific historical source reputation.
+MarketEvolver is a governed financial-market research laboratory. Version 0.16
+adds immutable hypothesis experiments, typed signals, point-in-time historical
+simulation, explicit costs, and reproducible robustness evaluation.
 
 This repository intentionally contains **no trading bot**, broker integration,
 order placement, leverage, options, or real-money execution capability.
@@ -77,6 +77,11 @@ market-evolver fusion contradictions --at 2025-01-02T12:00:00+00:00
 market-evolver fusion lead-time <claim-id> --at 2025-01-02T12:00:00+00:00
 market-evolver fusion benchmark
 market-evolver reputation source <source-id> --domain defense --at 2025-01-02T12:00:00+00:00
+market-evolver experiment validate <experiment-id>
+market-evolver backtest run <experiment-id> --signal-at asset.xtae.nice=2025-01-02T08:00:00+00:00 --at 2025-02-01T00:00:00+00:00
+market-evolver backtest show <result-id>
+market-evolver backtest compare <result-a> <result-b>
+market-evolver walkforward run <experiment-id>
 ```
 
 External ingestion also requires `network_access = true` in trusted runtime
@@ -96,3 +101,5 @@ See [Architecture](docs/architecture.md), [Threat model](docs/threat-model.md),
 and [Telegram connector](docs/telegram-connector.md).
 [Evidence fusion](docs/evidence-fusion.md) and
 [Source reputation](docs/source-reputation.md).
+[Hypothesis testing](docs/hypothesis-testing.md), [Backtesting](docs/backtesting.md),
+and [Transaction costs](docs/transaction-costs.md).
