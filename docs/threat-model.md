@@ -69,6 +69,11 @@ configuration.
 | Replay hypothesis is changed after seeing outcome | Complete commitment is persisted before clock advance; ORM and database reject mutation |
 | Benchmark constituents leak current membership | Dataset caveat is explicit; v0.10 does not claim historical constituent reconstruction |
 | Delisted assets disappear from evaluation | Asset versions support delisting, while the initial curated benchmark flags survivorship bias |
+| Revised macro release leaks backward | Initial and revised releases are append-only; cutoff queries use local first-observation time |
+| Current API history is mistaken for historical visibility | Connectors remain disabled unless release-vintage semantics are reviewed and captured |
+| Seasonal and raw series are mixed | Seasonal-adjustment class is part of revision identity and trend inputs cannot mix classes |
+| Missing expectations become fabricated surprises | Missing expectation is explicitly unknown; value, source, and observed time are atomic |
+| Trend direction becomes an investment instruction | Trend states and mechanism mappings are direction-neutral research observations |
 | Database downgrade or misdirection | Explicit PostgreSQL URL, mandatory configuration, TLS default, versioned Alembic migration |
 | Mutation through ORM or direct SQL | ORM hooks fail and PostgreSQL triggers reject updates/deletes; production roles remain least-privilege |
 | Prompt injection in news/social text | Content is data, not instructions; labs expose evidence only |
@@ -161,6 +166,13 @@ detects replacement but not false source data. The curated universe and seven
 cases are subject to selection and survivorship bias; benchmark composition is
 not reconstructed. Outcome returns describe observed price paths and must not be
 presented as realized strategy profit.
+
+Macro data adds preliminary releases, revisions, rebenchmarks, seasonal-factor
+changes, publication lags, and incompatible units. Point-in-time capture can
+preserve only vintages actually observed. Deterministic slopes and anomaly
+scores describe their inputs but do not establish causation or predict asset
+returns. Curated structural themes are hypotheses subject to selection bias and
+must not be presented as automatically detected facts.
 
 Company seed data can become stale through ticker changes, delistings, mergers,
 or classification changes. It is curated rather than a complete security master

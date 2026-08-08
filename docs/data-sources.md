@@ -115,3 +115,18 @@ social platforms. Adding metadata never authorizes ingestion or execution.
 - **Known limitations:** company facts may contain multiple contexts, dimensions,
   custom taxonomy extensions, and amended duplicates. Version 0.8 parses only a
   small `us-gaap` allowlist and does not perform full XBRL reconciliation.
+
+## Macro source candidates (v0.11)
+
+| Registry ID | Authority | Status | Expected cadence | Revision and timestamp limitation |
+| --- | --- | --- | --- | --- |
+| `il.cbs` | Israel CBS, official primary | Disabled | Dataset-specific monthly/quarterly | Current values do not prove release vintages; CPI contract remains under review |
+| `us.fred` | Federal Reserve Bank of St. Louis, official secondary | Disabled | Series-specific | ALFRED realtime periods must be captured and validated before replay |
+| `eu.ecb.data` | ECB, official primary | Disabled | Series-specific | SDMX revisions require locally retained vintages |
+| `global.worldbank` | World Bank, official secondary | Disabled | Usually annual | Histories may be rebenchmarked without complete vintage guarantees |
+| `global.oecd.sdmx` | OECD, official secondary | Disabled | Series-specific | Dataset structures and observations can be revised |
+| `us.eia` | EIA, official primary | Disabled | Daily through annual | API-key, release, and revision semantics require series-level review |
+
+Registry presence is not enablement. v0.11 made no live request to these
+sources. The already reviewed BOI FX and policy endpoints remain enabled, but
+their current responses are not treated as complete historical macro archives.

@@ -56,6 +56,9 @@ Israel market ontology on top of the evidence and event layers.
 17. **Market data and replay** catalogs immutable market observations in
     PostgreSQL, stores bulk rows in content-addressed Parquet, queries through
     DuckDB, and binds every historical evaluation to a pre-advance commitment.
+18. **Macro and trends** stores source-release vintages separately from
+    deterministic trend calculations, preserves disagreement, and injects only
+    cutoff-visible macro state into research and replay.
 
 ```text
 fetch -> local first_observed_at + SHA-256 -> immutable raw artifact + receipt
@@ -262,6 +265,20 @@ The asset seed contains 18 linked instruments and the benchmark contains seven
 versioned case types across seven research modes. Both are deliberately small.
 No external historical-market source is enabled pending a reviewed data and
 licensing contract.
+
+## Macro and trend intelligence
+
+Alembic revision `0010` adds macro-release vintages, deterministic trend
+signals, explicit divergences, and curated structural candidates. Repository
+queries group releases by observation period and seasonal-adjustment class,
+then select only the latest version whose local first-observation time is at or
+before the cutoff. Trend records retain every input observation ID and their
+calculation version.
+
+Research contexts and replay snapshots include cutoff-visible macro, trend, and
+structural records. They do not rebuild historical state from the current value
+of an external API. Direction-neutral mechanism mappings connect trend families
+to the existing knowledge vocabulary without asserting asset direction.
 
 ## Governance
 

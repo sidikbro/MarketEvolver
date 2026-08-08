@@ -5,9 +5,11 @@
 The replay clock advances daily, through an explicit event timestamp sequence,
 or through a caller-supplied configured sequence. At timestamp `T`, a snapshot
 contains only canonical events, policy actions, news, fundamentals, graph
-relationships, and market observations whose local visibility time is no later
-than `T`. Publisher dates and reconstructed market dates cannot grant earlier
-visibility.
+relationships, market observations, macro-release vintages, deterministic
+trends, and curated structural candidates whose local visibility time is no
+later than `T`. Publisher dates and reconstructed market or macro periods cannot
+grant earlier visibility. A later macro revision replaces current query output
+but never changes an earlier replay snapshot.
 
 Before advancing, the engine requires an immutable research commitment bound to
 the current case and timestamp. It records the context manifest, hypothesis,
