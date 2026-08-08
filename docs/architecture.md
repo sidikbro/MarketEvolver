@@ -62,6 +62,9 @@ Israel market ontology on top of the evidence and event layers.
 19. **Geopolitical intelligence** separates extracted candidates, governed
     promotion, immutable event versions, timed corroboration, and independently
     provenanced multi-horizon economic-transmission paths.
+20. **Social and narrative foundation** stores public untrusted posts, immutable
+    edits, copy-aware propagation, reviewed narratives, rumor versions,
+    coordination candidates, and historical domain reputation.
 
 ```text
 fetch -> local first_observed_at + SHA-256 -> immutable raw artifact + receipt

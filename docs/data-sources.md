@@ -146,3 +146,10 @@ their current responses are not treated as complete historical macro archives.
 
 The disabled aviation, shipping, and energy interfaces perform no fetch. Source
 registration never authorizes network access or canonical event promotion.
+
+## Social sources (v0.13)
+
+No live social connector is enabled. Telegram and private-message ingestion are
+absent. Only synthetic, publicly harmless fixtures exercise the schemas. Future
+connectors must prove public accessibility, legal retention, edit/delete
+semantics, stable source identity, rate limits, and raw-artifact provenance.

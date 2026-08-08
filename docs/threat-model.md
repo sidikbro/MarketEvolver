@@ -80,6 +80,11 @@ configuration.
 | Conflicting reports are collapsed | Official contradiction and unresolved conflict remain explicit timed records |
 | Human harm is optimized as a market opportunity | Casualty/outcome forecasting, political-intent inference, trade direction, and allocation are excluded |
 | Candidate mechanism becomes asserted causation | Paths retain candidate status, horizon, confidence, rationale, and provenance separately from events |
+| Social prompt injection reaches research instructions | Raw social text remains untrusted data and is excluded from context by default |
+| Copies amplify apparent support | Propagation and deterministic fingerprints separate copies/reposts from independent sources |
+| Future reputation leaks backward | Reputation snapshots are immutable and selected by computation cutoff |
+| Coordination candidate becomes accusation | Feature clusters remain uncertain candidates; no bot or malicious label is inferred |
+| Private communication is collected | Only explicitly public sources are accepted; private accessibility is rejected |
 | Database downgrade or misdirection | Explicit PostgreSQL URL, mandatory configuration, TLS default, versioned Alembic migration |
 | Mutation through ORM or direct SQL | ORM hooks fail and PostgreSQL triggers reject updates/deletes; production roles remain least-privilege |
 | Prompt injection in news/social text | Content is data, not instructions; labs expose evidence only |

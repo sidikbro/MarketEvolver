@@ -17,6 +17,11 @@ a rumor in that replay even if an official confirmation or contradiction arrives
 at `T2`. Reopenings, ceasefire violations, sanctions amendments, and resolutions
 append versions rather than overwriting the earlier state.
 
+Social replay selects only posts and edit/delete observations visible at `T`,
+rumor status known at `T`, reviewed narrative objects, propagation edges, and
+reputation snapshots computed from outcomes known by `T`. Raw social text is not
+automatically added to model context.
+
 Before advancing, the engine requires an immutable research commitment bound to
 the current case and timestamp. It records the context manifest, hypothesis,
 horizon, measurable outcome, falsification criterion, confidence, reviewer
