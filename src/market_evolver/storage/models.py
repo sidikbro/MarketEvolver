@@ -1213,6 +1213,51 @@ class SocialReputationModel(Base):
     uncertainty: Mapped[str] = mapped_column(String(128), nullable=False)
 
 
+class TelegramReceiptModel(Base):
+    __tablename__ = "telegram_receipts"
+    receipt_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    allowlist_source_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    post_id: Mapped[str] = mapped_column(
+        ForeignKey("social_posts.post_id"), nullable=False, index=True
+    )
+    native_message_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    forward_source: Mapped[str | None] = mapped_column(String(256))
+    forward_message_id: Mapped[int | None] = mapped_column(Integer)
+    forward_hidden: Mapped[bool] = mapped_column(nullable=False)
+    artifact_sha256: Mapped[str] = mapped_column(ForeignKey("artifacts.sha256"), nullable=False)
+    payload_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+
+
+class TelegramCheckpointModel(Base):
+    __tablename__ = "telegram_checkpoints"
+    checkpoint_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    source_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    last_message_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+
+
+class TelegramRunModel(Base):
+    __tablename__ = "telegram_runs"
+    run_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    source_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    finished_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    messages_fetched: Mapped[int] = mapped_column(Integer, nullable=False)
+    inserted: Mapped[int] = mapped_column(Integer, nullable=False)
+    duplicates: Mapped[int] = mapped_column(Integer, nullable=False)
+    edits: Mapped[int] = mapped_column(Integer, nullable=False)
+    forwards: Mapped[int] = mapped_column(Integer, nullable=False)
+    deletions: Mapped[int] = mapped_column(Integer, nullable=False)
+    bytes_downloaded: Mapped[int] = mapped_column(Integer, nullable=False)
+    error_summary: Mapped[str | None] = mapped_column(String)
+
+
 def _forbid_mutation(_mapper: Any, _connection: Any, target: Any) -> None:
     raise ImmutableRecordError(
         f"{type(target).__name__} {getattr(target, 'provenance_id', '')} is immutable"
@@ -1277,6 +1322,9 @@ for _model in (
     SocialPropagationModel,
     CoordinationCandidateModel,
     SocialReputationModel,
+    TelegramReceiptModel,
+    TelegramCheckpointModel,
+    TelegramRunModel,
     SourceModel,
     EvidenceModel,
     EventModel,

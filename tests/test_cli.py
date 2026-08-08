@@ -179,6 +179,17 @@ class CliTests(unittest.TestCase):
         self.assertIn("global.icao\tdisabled", output.getvalue())
         self.assertIn("uk.bbc.business\tenabled", output.getvalue())
 
+    def test_telegram_commands_are_bounded(self) -> None:
+        parser = build_parser()
+        self.assertEqual(parser.parse_args(["telegram", "validate"]).telegram_command, "validate")
+        self.assertEqual(
+            parser.parse_args(["telegram", "ingest", "tg.test", "--limit", "20"]).limit, 20
+        )
+        self.assertEqual(
+            parser.parse_args(["telegram", "backfill", "tg.test", "--since", "2025-01-01"]).since,
+            "2025-01-01",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

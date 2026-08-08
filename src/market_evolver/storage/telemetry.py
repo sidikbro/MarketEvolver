@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+from typing import TypedDict
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -70,6 +71,9 @@ from market_evolver.storage.models import (
     SocialSourceModel,
     SourceModel,
     StructuralTrendModel,
+    TelegramCheckpointModel,
+    TelegramReceiptModel,
+    TelegramRunModel,
     TrendDivergenceModel,
     TrendSignalModel,
 )
@@ -79,6 +83,21 @@ from market_evolver.storage.models import (
 class DailyMeasurement:
     day: date
     value: int
+
+
+class TelegramSourceTelemetry(TypedDict):
+    messages: int
+    bytes: int
+    originals: int
+    forwards: int
+    copies: int
+    edits: int
+    deletions: int
+    media_references: int
+    rumor_candidates: int
+    narrative_candidates: int
+    messages_by_day: dict[str, int]
+    bytes_by_day: dict[str, int]
 
 
 @dataclass(frozen=True, slots=True)
@@ -125,6 +144,7 @@ class StorageTelemetry:
     social_rumor_count: int = 0
     social_duplicate_count: int = 0
     social_coordination_count: int = 0
+    telegram_by_source: dict[str, TelegramSourceTelemetry] | None = None
 
 
 def measure_storage(session: Session) -> StorageTelemetry:
@@ -187,6 +207,9 @@ def measure_storage(session: Session) -> StorageTelemetry:
             SocialPropagationModel,
             CoordinationCandidateModel,
             SocialReputationModel,
+            TelegramReceiptModel,
+            TelegramCheckpointModel,
+            TelegramRunModel,
             TrendDivergenceModel,
             StructuralTrendModel,
             GeopoliticalEventModel,
@@ -310,6 +333,67 @@ def measure_storage(session: Session) -> StorageTelemetry:
     for social_post in session.scalars(select(SocialPostModel)):
         day = social_post.first_observed_at.date()
         social_days[day] = social_days.get(day, 0) + 1
+    telegram_stats: dict[str, TelegramSourceTelemetry] = {}
+    for telegram_receipt in session.scalars(select(TelegramReceiptModel)):
+        stats = telegram_stats.setdefault(
+            telegram_receipt.allowlist_source_id,
+            {
+                "messages": 0,
+                "bytes": 0,
+                "originals": 0,
+                "forwards": 0,
+                "copies": 0,
+                "edits": 0,
+                "deletions": 0,
+                "media_references": 0,
+                "rumor_candidates": 0,
+                "narrative_candidates": 0,
+                "messages_by_day": {},
+                "bytes_by_day": {},
+            },
+        )
+        stats["messages"] += 1
+        stats["bytes"] += telegram_receipt.payload_bytes
+        stats["forwards"] += int(
+            telegram_receipt.forward_source is not None or telegram_receipt.forward_hidden
+        )
+        stats["originals"] += int(
+            telegram_receipt.forward_source is None and not telegram_receipt.forward_hidden
+        )
+        telegram_day = telegram_receipt.observed_at.date().isoformat()
+        messages_by_day = stats["messages_by_day"]
+        bytes_by_day = stats["bytes_by_day"]
+        messages_by_day[telegram_day] = messages_by_day.get(telegram_day, 0) + 1
+        bytes_by_day[telegram_day] = (
+            bytes_by_day.get(telegram_day, 0) + telegram_receipt.payload_bytes
+        )
+        post = session.get(SocialPostModel, telegram_receipt.post_id)
+        if post is not None:
+            stats["edits"] += int(post.edited_at is not None)
+            stats["deletions"] += int(post.deleted_at is not None)
+            stats["media_references"] += len(post.media_references)
+            copy_count = int(
+                session.scalar(
+                    select(func.count())
+                    .select_from(SocialPropagationModel)
+                    .where(
+                        SocialPropagationModel.target_post_id == post.post_id,
+                        SocialPropagationModel.relation == "likely_copy_of",
+                    )
+                )
+                or 0
+            )
+            stats["copies"] += copy_count
+            if copy_count and telegram_receipt.forward_source is None:
+                stats["originals"] = max(0, stats["originals"] - 1)
+            stats["rumor_candidates"] += sum(
+                post.post_id in row.supporting_post_ids
+                for row in session.scalars(select(RumorClaimModel))
+            )
+            stats["narrative_candidates"] += sum(
+                post.post_id in row.supporting_post_ids
+                for row in session.scalars(select(NarrativeCandidateModel))
+            )
     return StorageTelemetry(
         raw_artifact_bytes=raw_bytes,
         database_record_counts=counts,
@@ -382,6 +466,7 @@ def measure_storage(session: Session) -> StorageTelemetry:
         social_rumor_count=_count(session, RumorClaimModel),
         social_duplicate_count=_count(session, SocialPropagationModel),
         social_coordination_count=_count(session, CoordinationCandidateModel),
+        telegram_by_source=telegram_stats,
     )
 
 

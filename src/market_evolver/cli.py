@@ -71,6 +71,8 @@ from market_evolver.storage.models import (
     GovernmentCandidateModel,
 )
 from market_evolver.storage.telemetry import measure_storage
+from market_evolver.telegram.client import TelethonClientAdapter
+from market_evolver.telegram.runner import TelegramRunner
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -263,6 +265,16 @@ def build_parser() -> argparse.ArgumentParser:
     social_rep.add_argument("--domain", default="general_market")
     social_rep.add_argument("--at", required=True)
     social_commands.add_parser("coordination")
+    telegram = commands.add_parser("telegram")
+    telegram_commands = telegram.add_subparsers(dest="telegram_command", required=True)
+    telegram_commands.add_parser("validate")
+    telegram_ingest = telegram_commands.add_parser("ingest")
+    telegram_ingest.add_argument("source_id")
+    telegram_ingest.add_argument("--limit", type=int, default=20)
+    telegram_backfill = telegram_commands.add_parser("backfill")
+    telegram_backfill.add_argument("source_id")
+    telegram_backfill.add_argument("--since", required=True)
+    telegram_backfill.add_argument("--limit", type=int, default=100)
     return parser
 
 
@@ -360,12 +372,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _geopolitical_command(args, session)
         if args.command == "social":
             return _social_command(args, session)
+        if args.command == "telegram":
+            return _telegram_command(args, config, session)
         telemetry = measure_storage(session)
         print(
             json.dumps(
                 {
                     "raw_artifact_bytes": telemetry.raw_artifact_bytes,
                     "database_record_counts": telemetry.database_record_counts,
+                    "telegram_by_source": telemetry.telegram_by_source,
                     "ingestion_bytes_by_day": [
                         {"day": item.day.isoformat(), "bytes": item.value}
                         for item in telemetry.ingestion_bytes_by_day
@@ -1475,6 +1490,36 @@ def _social_command(args: argparse.Namespace, session: Session) -> int:
         )
     )
     return 0
+
+
+def _telegram_command(args: argparse.Namespace, config: AppConfig, session: Session) -> int:
+    if not config.telegram.enabled:
+        raise GovernanceViolation("Telegram connector is disabled")
+    if (
+        not config.runtime_permissions.network_access
+        or not config.runtime_permissions.secrets_access
+    ):
+        raise GovernanceViolation("Telegram requires host-granted network and secrets access")
+    api_id, api_hash, session_token = config.telegram.credentials()
+    client = TelethonClientAdapter(api_id, api_hash, session_token)
+    enabled = tuple(item for item in config.telegram.allowlist if item.enabled)
+    if args.telegram_command == "validate":
+        results = {
+            item.source_id: client.validate_public(item.public_identifier) for item in enabled
+        }
+        print(json.dumps(results))
+        return int(not all(results.values()))
+    source = next((item for item in enabled if item.source_id == args.source_id), None)
+    if source is None:
+        raise GovernanceViolation("Telegram source is not enabled in allowlist")
+    since = None
+    if args.telegram_command == "backfill":
+        since = datetime.fromisoformat(args.since).replace(tzinfo=UTC)
+    result = TelegramRunner(
+        session, LocalArtifactStore(config.artifact_storage.resolve_root()), client
+    ).run(source, limit=args.limit, since=since, observed_at=datetime.now(UTC))
+    print(json.dumps(asdict(result), default=str))
+    return int(result.status.value == "failed")
 
 
 def _macro_observation_from_dict(item: object) -> MacroObservation:

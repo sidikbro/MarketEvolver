@@ -26,6 +26,7 @@ from market_evolver.company.schemas import (
     RestatementStatus,
 )
 from market_evolver.company.seed import seed_companies
+from market_evolver.config import TelegramSourceConfig
 from market_evolver.geopolitical.extraction import extract_candidate
 from market_evolver.geopolitical.repository import SqlGeopoliticalRepository
 from market_evolver.geopolitical.schemas import (
@@ -80,8 +81,11 @@ from market_evolver.social.schemas import (
     VerificationState,
 )
 from market_evolver.sources.registry import TrustClass
-from market_evolver.storage.models import ArtifactModel, EvidenceModel
+from market_evolver.storage.artifacts import LocalArtifactStore
+from market_evolver.storage.models import ArtifactModel, EvidenceModel, TelegramReceiptModel
 from market_evolver.storage.repositories import SqlEvidenceRepository, SqlSourceRepository
+from market_evolver.telegram.runner import TelegramRunner
+from market_evolver.telegram.schemas import TelegramMessage
 
 pytestmark = pytest.mark.postgres
 
@@ -110,9 +114,97 @@ def migrated_engine(postgres_url: str):
         os.environ["MARKET_EVOLVER_DATABASE_URL"] = previous
 
 
-def test_migrations_reach_0012(migrated_engine) -> None:
+def test_migrations_reach_0013(migrated_engine) -> None:
     with migrated_engine.connect() as connection:
-        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0012"
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0013"
+
+
+def test_telegram_revision_cutoff_and_append_only(migrated_engine, tmp_path: Path) -> None:
+    token = uuid4().hex
+    source_config = TelegramSourceConfig(
+        f"telegram.integration.{token}",
+        f"public_{token}",
+        "public_channel",
+        ("en",),
+        ("integration",),
+        True,
+        None,
+        10,
+        "metadata_only",
+    )
+    observed = datetime.now(UTC) - timedelta(minutes=3)
+
+    class StaticTelegramClient:
+        messages: tuple[TelegramMessage, ...] = ()
+
+        def validate_public(self, identifier: str) -> bool:
+            return True
+
+        def fetch(self, identifier, *, limit, since, after_id):
+            return self.messages
+
+    client = StaticTelegramClient()
+    with Session(migrated_engine) as session:
+        runner = TelegramRunner(
+            session, LocalArtifactStore(tmp_path), client, sleeper=lambda _: None
+        )
+        client.messages = (TelegramMessage(1, observed, "original"),)
+        runner.run(source_config, limit=10, since=None, observed_at=observed)
+        client.messages = (
+            TelegramMessage(1, observed, "edited", edited_at=observed + timedelta(minutes=1)),
+        )
+        runner.run(
+            source_config,
+            limit=10,
+            since=None,
+            observed_at=observed + timedelta(minutes=1),
+        )
+        client.messages = (
+            TelegramMessage(1, observed, "", deleted=True),
+            TelegramMessage(
+                2,
+                observed + timedelta(minutes=1),
+                "forwarded",
+                forward_source="@public_origin",
+                forward_message_id=9,
+            ),
+        )
+        runner.run(
+            source_config,
+            limit=10,
+            since=None,
+            observed_at=observed + timedelta(minutes=2),
+        )
+        repo = SqlSocialRepository(session)
+        assert repo.posts_visible_at(observed)[0].original_text == "original"
+        assert repo.posts_visible_at(observed + timedelta(minutes=1))[0].original_text == "edited"
+        after_deletion = repo.posts_visible_at(observed + timedelta(minutes=2))
+        assert next(post for post in after_deletion if post.native_post_id == "1").deleted_at
+        assert (
+            session.scalar(
+                text(
+                    "SELECT count(*) FROM telegram_receipts "
+                    "WHERE allowlist_source_id = :source_id AND forward_source IS NOT NULL"
+                ),
+                {"source_id": source_config.source_id},
+            )
+            == 1
+        )
+        receipt_id = session.scalar(
+            text(
+                "SELECT receipt_id FROM telegram_receipts "
+                "WHERE allowlist_source_id = :source_id LIMIT 1"
+            ),
+            {"source_id": source_config.source_id},
+        )
+        with pytest.raises(DBAPIError):
+            session.execute(
+                text("UPDATE telegram_receipts SET payload_bytes = 0 WHERE receipt_id = :id"),
+                {"id": receipt_id},
+            )
+            session.flush()
+        session.rollback()
+        assert session.get(TelegramReceiptModel, receipt_id) is not None
 
 
 def test_append_only_update_and_delete_are_rejected(migrated_engine) -> None:

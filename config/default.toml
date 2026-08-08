@@ -42,3 +42,10 @@ authorization_env = "MARKET_EVOLVER_LLM_AUTHORIZATION"
 # Content-addressed Parquet partitions. Relocate independently of application code.
 root = "data/market"
 root_env = "MARKET_EVOLVER_MARKET_ROOT"
+
+[telegram]
+enabled = false
+api_id_env = "MARKET_EVOLVER_TELEGRAM_API_ID"
+api_hash_env = "MARKET_EVOLVER_TELEGRAM_API_HASH"
+session_env = "MARKET_EVOLVER_TELEGRAM_SESSION"
+# Add only explicit public sources with [[telegram.allowlist]]. Credentials remain environment-only.
