@@ -1,8 +1,8 @@
 # MarketEvolver
 
-MarketEvolver is a governed financial-market research laboratory. Version 0.13
-adds an offline, public-source social and narrative intelligence foundation with
-untrusted-content separation and point-in-time rumor/reputation replay.
+MarketEvolver is a governed financial-market research laboratory. Version 0.14
+adds a disabled-by-default, explicitly allowlisted Telegram public-source
+connector with immutable provenance and untrusted-content separation.
 
 This repository intentionally contains **no trading bot**, broker integration,
 order placement, leverage, options, or real-money execution capability.
@@ -68,6 +68,9 @@ market-evolver geopolitical baseline --at 2025-01-02T12:00:00+00:00
 market-evolver social source-list
 market-evolver social narratives
 market-evolver social coordination
+market-evolver telegram validate
+market-evolver telegram ingest <allowlist-source-id> --limit 20
+market-evolver telegram backfill <allowlist-source-id> --since 2025-01-01 --limit 100
 ```
 
 External ingestion also requires `network_access = true` in trusted runtime
@@ -82,5 +85,6 @@ See [Architecture](docs/architecture.md), [Threat model](docs/threat-model.md),
 [Market data](docs/market-data.md), [Historical replay](docs/historical-replay.md), and
 [Replay benchmark](docs/benchmark.md), [Macro Lab](docs/macro-lab.md),
 [Trends Lab](docs/trends-lab.md), and
-[Geopolitical Lab](docs/geopolitical-lab.md).
-[Social Lab](docs/social-lab.md) and [Narrative Intelligence](docs/narrative-intelligence.md).
+[Geopolitical Lab](docs/geopolitical-lab.md),
+[Social Lab](docs/social-lab.md), [Narrative Intelligence](docs/narrative-intelligence.md),
+and [Telegram connector](docs/telegram-connector.md).

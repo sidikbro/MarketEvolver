@@ -1,9 +1,9 @@
 # Social Lab
 
-Version 0.13 defines an offline foundation for public social/community sources.
-Private messages and private groups are rejected. No Telegram or other live
-connector is enabled. Platform verification describes identity metadata, not
-truthfulness.
+Version 0.14 retains the offline foundation and adds a disabled-by-default,
+explicit-allowlist Telegram public-source connector. Private messages and
+private groups remain rejected. Platform verification describes identity
+metadata, not truthfulness.
 
 Every post is immutable and defaults to `untrusted_unstructured`. Edits and
 observable deletions append versions. Original text, normalized text, hashes,
@@ -18,3 +18,7 @@ time for posts, edits, deletions, claims, and reputation snapshots.
 Only harmless synthetic fixtures are included: accurate and false rumors,
 copies, edits, bilingual propagation, a coordination-looking cluster, and
 independent corroboration.
+
+Telegram posts enter this same untrusted boundary. Native forwards are counted
+separately from originals; hidden origins remain unknown. Connector credentials
+never enter social records, and raw Telegram text receives no new authority.

@@ -149,7 +149,19 @@ registration never authorizes network access or canonical event promotion.
 
 ## Social sources (v0.13)
 
-No live social connector is enabled. Telegram and private-message ingestion are
-absent. Only synthetic, publicly harmless fixtures exercise the schemas. Future
-connectors must prove public accessibility, legal retention, edit/delete
+Version 0.13 enabled no live social connector; only synthetic, publicly harmless
+fixtures exercised the schemas. Private-message ingestion remains absent.
+Connectors must prove public accessibility, legal retention, edit/delete
 semantics, stable source identity, rate limits, and raw-artifact provenance.
+
+## Telegram public sources (v0.14)
+
+No channel is enabled in repository defaults. Operators may configure only
+reviewed public-channel or public-group usernames in the explicit allowlist.
+Telegram publication/edit metadata is source-supplied; local
+`first_observed_at` alone establishes historical visibility. Messages and raw
+artifacts are immutable, while edits and observed deletions append versions.
+Forwards retain visible native origins or an explicit unknown-origin marker.
+Media collection is metadata-only. API access, retention legality, channel
+identity, revision behavior, and deletion observability must be reviewed per
+source before enablement.

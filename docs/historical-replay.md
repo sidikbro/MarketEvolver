@@ -1,5 +1,10 @@
 # Historical research replay
 
+Telegram post versions use local `first_observed_at` for replay eligibility.
+Later edits and observed deletions cannot leak backward; the original immutable
+version remains queryable at earlier cutoffs. Hidden forward origins remain
+unknown rather than being reconstructed.
+
 ## Deterministic clock and visibility
 
 The replay clock advances daily, through an explicit event timestamp sequence,

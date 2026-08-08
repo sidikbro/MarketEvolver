@@ -1,5 +1,21 @@
 # Threat model
 
+## Telegram public-source boundary
+
+Telegram content is attacker-controlled untrusted data, including captions,
+links, filenames, and prompt-like text. It cannot grant permissions, invoke
+tools, promote canonical facts, or trigger execution. Collection is disabled by
+default, restricted to explicit public usernames and bounded history, and
+requires both network and secrets runtime permissions. Private chats, contacts,
+join links, media downloads, and discovery are rejected.
+
+API credentials and sessions are environment-only secrets. Manifests and errors
+record sanitized classes and counts, never credential values. Immutable raw
+artifacts and database triggers limit evidence tampering; append-only edits and
+deletions prevent historical rewriting. Remaining risks include account
+compromise, source impersonation, hidden forward origin, ambiguous deletion
+gaps, platform API changes, and jurisdiction-specific retention obligations.
+
 ## Assets and security properties
 
 The protected assets are research integrity, point-in-time correctness, raw

@@ -1,5 +1,11 @@
 # Architecture
 
+Version 0.14 places a replaceable Telegram client adapter outside the governed
+social domain. The adapter may fetch only explicit public allowlist entries.
+The runner writes a content-addressed raw artifact before normalization, then
+appends untrusted social-post versions, Telegram receipts, checkpoints, and run
+manifests. Credentials remain environment-only and never cross into storage.
+
 ## Scope and boundary
 
 MarketEvolver currently defines a research domain, not a trading system. The
