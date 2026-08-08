@@ -1,5 +1,10 @@
 # News Lab
 
+News evidence enters fusion with its original trust class, evidence provenance,
+publication time, and local first-observation time intact. Syndicated or copied
+articles are dependent observations, not multiple independent confirmations.
+Fusion never upgrades untrusted reporting merely because it is repeated.
+
 ## Security boundary
 
 Source trust class is provenance metadata, not a declaration that a claim is

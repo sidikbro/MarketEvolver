@@ -1,5 +1,10 @@
 # Historical research replay
 
+Fusion replay exposes only claim versions, lineage, corroboration, resolutions,
+contradictions, and reputation snapshots observed by the cutoff. Later official
+confirmation and later source-performance knowledge never alter the historical
+bundle. Full history remains available outside the selected recency window.
+
 Telegram post versions use local `first_observed_at` for replay eligibility.
 Later edits and observed deletions cannot leak backward; the original immutable
 version remains queryable at earlier cutoffs. Hidden forward origins remain

@@ -1,5 +1,16 @@
 # Threat model
 
+## Fusion and reputation poisoning
+
+Attackers may amplify one claim through copied, forwarded, syndicated, or
+cross-language posts to simulate consensus. Fusion requires deterministic
+identity evidence and discounts dependent sources. Claims cannot self-resolve
+unless they are reviewed primary authoritative statements. Exact contradiction
+sides remain stored, and future outcomes or reputation cannot leak into an
+earlier replay. Remaining risks include missing syndication disclosure,
+identifier collisions, coordinated nominally independent sources, domain
+misclassification, and sparse-sample reputation overinterpretation.
+
 ## Telegram public-source boundary
 
 Telegram content is attacker-controlled untrusted data, including captions,

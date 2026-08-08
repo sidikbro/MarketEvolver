@@ -1,5 +1,11 @@
 # Architecture
 
+Version 0.15 adds an append-only fusion domain between source-specific labs and
+research context. Source records remain authoritative for their own provenance;
+unified claims reference them without overwriting them. Deterministic matching,
+independence classification, resolution, contradiction, component scoring, and
+domain reputation are separate persisted records with independent cutoff times.
+
 Version 0.14 places a replaceable Telegram client adapter outside the governed
 social domain. The adapter may fetch only explicit public allowlist entries.
 The runner writes a content-addressed raw artifact before normalization, then

@@ -1,5 +1,10 @@
 # Social Lab
 
+Reviewed social and Telegram claims may enter v0.15 fusion as rumors or
+narratives. Forward/copy lineage prevents repeated material from counting as
+independent confirmation. Social sources receive domain reputation credit only
+for claims they originated and outcomes visible at the requested cutoff.
+
 Version 0.14 retains the offline foundation and adds a disabled-by-default,
 explicit-allowlist Telegram public-source connector. Private messages and
 private groups remain rejected. Platform verification describes identity
