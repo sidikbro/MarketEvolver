@@ -8,6 +8,8 @@ from sqlalchemy.orm import Session
 
 from market_evolver.company.seed import seed_companies
 from market_evolver.errors import ImmutableRecordError, IntegrityViolation, ValidationError
+from market_evolver.fusion.repository import SqlFusionRepository
+from market_evolver.fusion.schemas import ClaimStatus, UnifiedClaim, UnifiedClaimType
 from market_evolver.knowledge.seed import seed_knowledge_graph
 from market_evolver.research.baselines import baseline
 from market_evolver.research.context import ResearchContextBuilder
@@ -28,7 +30,7 @@ from market_evolver.research.schemas import (
     ResearchTask,
 )
 from market_evolver.research.service import ResearchService
-from market_evolver.storage.models import Base, ResearchContextModel
+from market_evolver.storage.models import Base, EvidenceModel, ResearchContextModel
 
 T1 = datetime(2025, 1, 1, tzinfo=UTC)
 T2 = T1 + timedelta(days=1)
@@ -269,6 +271,41 @@ class ResearchIntelligenceTests(unittest.TestCase):
         context = ResearchContextBuilder(self.session).build("nice", T1)
         self.assertTrue(all(item.first_observed_at <= T1 for item in context.items))
         self.assertTrue(any(item.kind == "company" for item in context.items))
+
+    def test_context_prefers_visible_fused_claim_bundle(self) -> None:
+        seed_knowledge_graph(self.session)
+        seed_companies(self.session)
+        self.session.add(
+            EvidenceModel(
+                provenance_id="evidence:fused",
+                claim="Officially grounded proposition",
+                source_ids=["official.source"],
+                observed_at=T1,
+                excerpt_digest="sha256:" + "a" * 64,
+                embedding=None,
+            )
+        )
+        fused = UnifiedClaim(
+            "NICE disclosed a synthetic test fact",
+            UnifiedClaimType.COMPANY_DISCLOSURE,
+            ("nice",),
+            ("IL",),
+            "company_specific",
+            ("evidence:fused",),
+            "filing.sec",
+            T1,
+            T1,
+            None,
+            ClaimStatus.ACTIVE,
+            1.0,
+            ("evidence:fused",),
+        )
+        SqlFusionRepository(self.session).add_claim(fused)
+        self.session.flush()
+        context = ResearchContextBuilder(self.session).build("nice", T1)
+        bundle = next(item for item in context.items if item.kind == "fused_claim_bundle")
+        self.assertEqual(bundle.provenance_id, fused.claim_id)
+        self.assertNotIn("raw social", bundle.text)
 
 
 if __name__ == "__main__":

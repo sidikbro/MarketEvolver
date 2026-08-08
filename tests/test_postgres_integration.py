@@ -27,6 +27,18 @@ from market_evolver.company.schemas import (
 )
 from market_evolver.company.seed import seed_companies
 from market_evolver.config import TelegramSourceConfig
+from market_evolver.fusion.engine import calculate_reputation
+from market_evolver.fusion.repository import SqlFusionRepository
+from market_evolver.fusion.schemas import (
+    ClaimLineage,
+    ClaimResolution,
+    ClaimStatus,
+    CorroborationState,
+    LineageType,
+    ResolutionOutcome,
+    UnifiedClaim,
+    UnifiedClaimType,
+)
 from market_evolver.geopolitical.extraction import extract_candidate
 from market_evolver.geopolitical.repository import SqlGeopoliticalRepository
 from market_evolver.geopolitical.schemas import (
@@ -114,9 +126,9 @@ def migrated_engine(postgres_url: str):
         os.environ["MARKET_EVOLVER_DATABASE_URL"] = previous
 
 
-def test_migrations_reach_0013(migrated_engine) -> None:
+def test_migrations_reach_0014(migrated_engine) -> None:
     with migrated_engine.connect() as connection:
-        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0013"
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0014"
 
 
 def test_telegram_revision_cutoff_and_append_only(migrated_engine, tmp_path: Path) -> None:
@@ -205,6 +217,80 @@ def test_telegram_revision_cutoff_and_append_only(migrated_engine, tmp_path: Pat
             session.flush()
         session.rollback()
         assert session.get(TelegramReceiptModel, receipt_id) is not None
+
+
+def test_fusion_lineage_resolution_reputation_and_append_only(migrated_engine) -> None:
+    token = uuid4().hex
+    t0 = datetime.now(UTC) - timedelta(days=2)
+    t1 = t0 + timedelta(days=1)
+    source_id = f"social.integration.{token}"
+    with Session(migrated_engine) as session:
+        repo = SqlFusionRepository(session)
+        original = UnifiedClaim(
+            "A synthetic defense procurement event occurred",
+            UnifiedClaimType.RUMOR,
+            (f"company.{token}",),
+            ("IL",),
+            "defense",
+            (f"evidence:{token}:social",),
+            source_id,
+            t0,
+            t0,
+            None,
+            ClaimStatus.ACTIVE,
+            0.4,
+            (f"fixture:{token}",),
+        )
+        official = UnifiedClaim(
+            original.proposition,
+            UnifiedClaimType.FACTUAL_EVENT,
+            original.entities,
+            original.geography,
+            original.domain,
+            (f"evidence:{token}:official",),
+            f"official.integration.{token}",
+            t1,
+            t1,
+            None,
+            ClaimStatus.ACTIVE,
+            1.0,
+            (f"fixture:{token}:official",),
+        )
+        repo.add_claim(original)
+        repo.add_claim(official)
+        repo.add_lineage(
+            ClaimLineage(
+                original.claim_id,
+                official.claim_id,
+                LineageType.CORROBORATED_BY,
+                t1,
+                official.source_evidence_ids,
+                "independent official confirmation",
+            )
+        )
+        repo.add_resolution(
+            ClaimResolution(
+                original.claim_id,
+                ResolutionOutcome.CONFIRMED,
+                CorroborationState.RESOLVED,
+                official.source_evidence_ids,
+                (official.originating_source_id,),
+                t1,
+                "official confirmation",
+            )
+        )
+        session.commit()
+        assert repo.lineage_visible_at(t0) == ()
+        assert len(repo.lineage_visible_at(t1)) == 1
+        assert calculate_reputation(session, source_id, "defense", t0).confirmed == 0
+        assert calculate_reputation(session, source_id, "defense", t1).confirmed == 1
+        with pytest.raises(DBAPIError):
+            session.execute(
+                text("UPDATE unified_claims SET confidence = 1 WHERE claim_id = :id"),
+                {"id": original.claim_id},
+            )
+            session.flush()
+        session.rollback()
 
 
 def test_append_only_update_and_delete_are_rejected(migrated_engine) -> None:

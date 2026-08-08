@@ -18,6 +18,9 @@ from market_evolver.company.schemas import CompanyVersion, Filing
 from market_evolver.company.seed import seed_companies
 from market_evolver.config import AppConfig, load_config
 from market_evolver.errors import GovernanceViolation
+from market_evolver.fusion.benchmark import run_false_rumor_benchmark
+from market_evolver.fusion.engine import calculate_reputation, current_corroboration_state
+from market_evolver.fusion.repository import SqlFusionRepository
 from market_evolver.geopolitical.baselines import calculate_baseline
 from market_evolver.geopolitical.extraction import extract_candidate
 from market_evolver.geopolitical.repository import SqlGeopoliticalRepository
@@ -275,6 +278,25 @@ def build_parser() -> argparse.ArgumentParser:
     telegram_backfill.add_argument("source_id")
     telegram_backfill.add_argument("--since", required=True)
     telegram_backfill.add_argument("--limit", type=int, default=100)
+    fusion = commands.add_parser("fusion")
+    fusion_commands = fusion.add_subparsers(dest="fusion_command", required=True)
+    fusion_claim = fusion_commands.add_parser("claim")
+    fusion_claim.add_argument("claim_id")
+    fusion_claim.add_argument("--at")
+    fusion_unresolved = fusion_commands.add_parser("unresolved")
+    fusion_unresolved.add_argument("--at")
+    fusion_contradictions = fusion_commands.add_parser("contradictions")
+    fusion_contradictions.add_argument("--at")
+    fusion_lead = fusion_commands.add_parser("lead-time")
+    fusion_lead.add_argument("claim_id")
+    fusion_lead.add_argument("--at")
+    fusion_commands.add_parser("benchmark")
+    reputation = commands.add_parser("reputation")
+    reputation_commands = reputation.add_subparsers(dest="reputation_command", required=True)
+    reputation_source = reputation_commands.add_parser("source")
+    reputation_source.add_argument("source_id")
+    reputation_source.add_argument("--domain", required=True)
+    reputation_source.add_argument("--at", required=True)
     return parser
 
 
@@ -374,6 +396,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _social_command(args, session)
         if args.command == "telegram":
             return _telegram_command(args, config, session)
+        if args.command == "fusion":
+            return _fusion_command(args, session)
+        if args.command == "reputation":
+            return _reputation_command(args, session)
         telemetry = measure_storage(session)
         print(
             json.dumps(
@@ -472,6 +498,26 @@ def main(argv: Sequence[str] | None = None) -> int:
                     ],
                     "geopolitical_affected_mechanisms": telemetry.geopolitical_affected_mechanisms,
                     "geopolitical_replay_inclusions": telemetry.geopolitical_replay_inclusions,
+                    "unified_claims_by_day": [
+                        {"day": item.day.isoformat(), "items": item.value}
+                        for item in telemetry.unified_claims_by_day
+                    ],
+                    "fused_clusters_by_day": [
+                        {"day": item.day.isoformat(), "items": item.value}
+                        for item in telemetry.fused_clusters_by_day
+                    ],
+                    "corroborated_claims_by_day": [
+                        {"day": item.day.isoformat(), "items": item.value}
+                        for item in telemetry.corroborated_claims_by_day
+                    ],
+                    "contradicted_claims_by_day": [
+                        {"day": item.day.isoformat(), "items": item.value}
+                        for item in telemetry.contradicted_claims_by_day
+                    ],
+                    "average_confirmation_lag_seconds": (
+                        telemetry.average_confirmation_lag_seconds
+                    ),
+                    "source_domain_resolution_counts": (telemetry.source_domain_resolution_counts),
                 },
                 indent=2,
             )
@@ -1489,6 +1535,54 @@ def _social_command(args: argparse.Namespace, session: Session) -> int:
             indent=2,
         )
     )
+    return 0
+
+
+def _fusion_command(args: argparse.Namespace, session: Session) -> int:
+    repo = SqlFusionRepository(session)
+    cutoff = datetime.now(UTC) if getattr(args, "at", None) is None else _parse_timestamp(args.at)
+    output: object
+    if args.fusion_command == "benchmark":
+        print(json.dumps(asdict(run_false_rumor_benchmark()), indent=2))
+        return 0
+    if args.fusion_command == "claim":
+        claim = repo.get_claim(args.claim_id, cutoff)
+        if claim is None:
+            raise GovernanceViolation("claim is not visible at cutoff")
+        output = {
+            "claim": asdict(claim),
+            "corroboration_state": current_corroboration_state(
+                session, claim.claim_id, cutoff
+            ).value,
+            "lineage": [asdict(item) for item in repo.lineage_visible_at(cutoff, claim.claim_id)],
+            "resolutions": [
+                asdict(item) for item in repo.resolutions_visible_at(claim.claim_id, cutoff)
+            ],
+        }
+    elif args.fusion_command == "unresolved":
+        output = [
+            asdict(claim)
+            for claim in repo.claims_visible_at(cutoff)
+            if not repo.resolutions_visible_at(claim.claim_id, cutoff)
+            or repo.resolutions_visible_at(claim.claim_id, cutoff)[-1].outcome.value == "unresolved"
+        ]
+    elif args.fusion_command == "contradictions":
+        output = [asdict(item) for item in repo.contradictions_visible_at(cutoff)]
+    else:
+        output = asdict(repo.lead_time(args.claim_id, cutoff))
+    print(json.dumps(output, default=str, indent=2))
+    return 0
+
+
+def _reputation_command(args: argparse.Namespace, session: Session) -> int:
+    cutoff = _parse_timestamp(args.at)
+    stored = SqlFusionRepository(session).reputation_at(args.source_id, args.domain, cutoff)
+    snapshot = (
+        stored
+        if stored is not None and stored.cutoff == cutoff
+        else calculate_reputation(session, args.source_id, args.domain, cutoff)
+    )
+    print(json.dumps(asdict(snapshot), default=str, indent=2))
     return 0
 
 

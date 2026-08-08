@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session
 
 from market_evolver.company.repositories import SqlCompanyRepository
 from market_evolver.errors import IntegrityViolation
+from market_evolver.fusion.engine import current_corroboration_state
+from market_evolver.fusion.repository import SqlFusionRepository
 from market_evolver.geopolitical.repository import SqlGeopoliticalRepository
 from market_evolver.macro.repository import SqlMacroRepository
 from market_evolver.research.schemas import ContextItem, ResearchContext
@@ -246,6 +248,34 @@ class ResearchContextBuilder:
                     rumor.first_observed_at,
                     f"Rumor status={rumor.status.value}: {rumor.proposition}",
                     rumor.official_evidence_ids + rumor.news_evidence_ids,
+                )
+            )
+        fusion = SqlFusionRepository(self.session)
+        for claim in fusion.claims_visible_at(at):
+            if company_id not in claim.entities and entity_id not in claim.entities:
+                continue
+            if not self._evidence_visible(claim.source_evidence_ids, at):
+                continue
+            evidence_ids.update(claim.source_evidence_ids)
+            contradictions = tuple(
+                item
+                for item in fusion.contradictions_visible_at(at)
+                if item.claim_id == claim.claim_id
+            )
+            reputation = fusion.reputation_at(claim.originating_source_id, claim.domain, at)
+            items.append(
+                ContextItem(
+                    "fused_claim_bundle",
+                    claim.claim_id,
+                    claim.first_observed_at,
+                    (
+                        f"{claim.claim_type.value}: {claim.proposition}; "
+                        f"corroboration="
+                        f"{current_corroboration_state(self.session, claim.claim_id, at).value}; "
+                        f"contradictions={len(contradictions)}; source_domain_precision="
+                        f"{None if reputation is None else reputation.precision_resolved}"
+                    ),
+                    claim.source_evidence_ids,
                 )
             )
         for evidence_id in sorted(evidence_ids):

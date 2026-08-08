@@ -190,6 +190,29 @@ class CliTests(unittest.TestCase):
             "2025-01-01",
         )
 
+    def test_fusion_and_reputation_commands_are_registered(self) -> None:
+        parser = build_parser()
+        self.assertEqual(
+            parser.parse_args(["fusion", "claim", "claim-1"]).fusion_command,
+            "claim",
+        )
+        self.assertEqual(
+            parser.parse_args(["fusion", "benchmark"]).fusion_command,
+            "benchmark",
+        )
+        reputation = parser.parse_args(
+            [
+                "reputation",
+                "source",
+                "social.alpha",
+                "--domain",
+                "defense",
+                "--at",
+                "2025-01-01T00:00:00+00:00",
+            ]
+        )
+        self.assertEqual(reputation.reputation_command, "source")
+
 
 if __name__ == "__main__":
     unittest.main()

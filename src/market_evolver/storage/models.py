@@ -14,6 +14,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Text,
     UniqueConstraint,
     event,
 )
@@ -1258,6 +1259,132 @@ class TelegramRunModel(Base):
     error_summary: Mapped[str | None] = mapped_column(String)
 
 
+class UnifiedClaimModel(Base):
+    __tablename__ = "unified_claims"
+    claim_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    proposition: Mapped[str] = mapped_column(Text, nullable=False)
+    claim_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    entities: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    geography: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    domain: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    source_evidence_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    originating_source_id: Mapped[str] = mapped_column(String(256), nullable=False, index=True)
+    first_observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    valid_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    valid_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    confidence: Mapped[float] = mapped_column(nullable=False)
+    provenance: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    revision_of: Mapped[str | None] = mapped_column(ForeignKey("unified_claims.claim_id"))
+
+
+class ClaimLineageModel(Base):
+    __tablename__ = "claim_lineage"
+    lineage_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    source_claim_id: Mapped[str] = mapped_column(
+        ForeignKey("unified_claims.claim_id"), nullable=False
+    )
+    target_claim_id: Mapped[str] = mapped_column(
+        ForeignKey("unified_claims.claim_id"), nullable=False
+    )
+    relationship: Mapped[str] = mapped_column(String(24), nullable=False)
+    observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    evidence_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    rationale: Mapped[str] = mapped_column(Text, nullable=False)
+
+
+class ClaimCorroborationModel(Base):
+    __tablename__ = "claim_corroborations"
+    record_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    claim_id: Mapped[str] = mapped_column(
+        ForeignKey("unified_claims.claim_id"), nullable=False, index=True
+    )
+    evidence_id: Mapped[str] = mapped_column(String(96), nullable=False)
+    source_id: Mapped[str] = mapped_column(String(256), nullable=False)
+    independence: Mapped[str] = mapped_column(String(24), nullable=False)
+    state: Mapped[str] = mapped_column(String(32), nullable=False)
+    observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    rationale: Mapped[str] = mapped_column(Text, nullable=False)
+
+
+class ClaimResolutionModel(Base):
+    __tablename__ = "claim_resolutions"
+    resolution_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    claim_id: Mapped[str] = mapped_column(
+        ForeignKey("unified_claims.claim_id"), nullable=False, index=True
+    )
+    outcome: Mapped[str] = mapped_column(String(24), nullable=False)
+    state: Mapped[str] = mapped_column(String(32), nullable=False)
+    supporting_evidence_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    resolving_source_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    resolved_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    rationale: Mapped[str] = mapped_column(Text, nullable=False)
+
+
+class ClaimContradictionModel(Base):
+    __tablename__ = "claim_contradictions"
+    contradiction_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    claim_id: Mapped[str] = mapped_column(
+        ForeignKey("unified_claims.claim_id"), nullable=False, index=True
+    )
+    proposition_a: Mapped[str] = mapped_column(Text, nullable=False)
+    proposition_b: Mapped[str] = mapped_column(Text, nullable=False)
+    evidence_a: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    evidence_b: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    resolution_status: Mapped[str] = mapped_column(String(24), nullable=False)
+    ambiguity: Mapped[str] = mapped_column(Text, nullable=False)
+
+
+class FusionScoreModel(Base):
+    __tablename__ = "fusion_scores"
+    score_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    claim_id: Mapped[str] = mapped_column(
+        ForeignKey("unified_claims.claim_id"), nullable=False, index=True
+    )
+    source_authority: Mapped[float] = mapped_column(nullable=False)
+    independence: Mapped[float] = mapped_column(nullable=False)
+    corroboration_count: Mapped[float] = mapped_column(nullable=False)
+    provenance_completeness: Mapped[float] = mapped_column(nullable=False)
+    contradiction_burden: Mapped[float] = mapped_column(nullable=False)
+    temporal_consistency: Mapped[float] = mapped_column(nullable=False)
+    historical_reputation: Mapped[float] = mapped_column(nullable=False)
+    calculated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+
+
+class FusionReputationModel(Base):
+    __tablename__ = "fusion_reputation_snapshots"
+    snapshot_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    source_id: Mapped[str] = mapped_column(String(256), nullable=False, index=True)
+    domain: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    window_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    cutoff: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    claims_originated: Mapped[int] = mapped_column(Integer, nullable=False)
+    confirmed: Mapped[int] = mapped_column(Integer, nullable=False)
+    contradicted: Mapped[int] = mapped_column(Integer, nullable=False)
+    unresolved: Mapped[int] = mapped_column(Integer, nullable=False)
+    precision_resolved: Mapped[float] = mapped_column(nullable=False)
+    median_confirmation_lead_seconds: Mapped[int | None] = mapped_column(Integer)
+    contradiction_rate: Mapped[float] = mapped_column(nullable=False)
+    copy_forward_rate: Mapped[float] = mapped_column(nullable=False)
+    original_content_rate: Mapped[float] = mapped_column(nullable=False)
+    sample_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    uncertainty: Mapped[str] = mapped_column(String(128), nullable=False)
+
+
 def _forbid_mutation(_mapper: Any, _connection: Any, target: Any) -> None:
     raise ImmutableRecordError(
         f"{type(target).__name__} {getattr(target, 'provenance_id', '')} is immutable"
@@ -1325,6 +1452,13 @@ for _model in (
     TelegramReceiptModel,
     TelegramCheckpointModel,
     TelegramRunModel,
+    UnifiedClaimModel,
+    ClaimLineageModel,
+    ClaimCorroborationModel,
+    ClaimResolutionModel,
+    ClaimContradictionModel,
+    FusionScoreModel,
+    FusionReputationModel,
     SourceModel,
     EvidenceModel,
     EventModel,

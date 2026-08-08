@@ -15,6 +15,10 @@ from market_evolver.storage.models import (
     AssetModel,
     BenchmarkPairModel,
     CanonicalEventModel,
+    ClaimContradictionModel,
+    ClaimCorroborationModel,
+    ClaimLineageModel,
+    ClaimResolutionModel,
     CompanyExposureModel,
     CompanyModel,
     ContextManifestModel,
@@ -28,6 +32,8 @@ from market_evolver.storage.models import (
     EvidenceModel,
     FilingModel,
     FundamentalModel,
+    FusionReputationModel,
+    FusionScoreModel,
     GeopoliticalCandidateModel,
     GeopoliticalCandidateReviewModel,
     GeopoliticalCorroborationModel,
@@ -76,6 +82,7 @@ from market_evolver.storage.models import (
     TelegramRunModel,
     TrendDivergenceModel,
     TrendSignalModel,
+    UnifiedClaimModel,
 )
 
 
@@ -145,6 +152,12 @@ class StorageTelemetry:
     social_duplicate_count: int = 0
     social_coordination_count: int = 0
     telegram_by_source: dict[str, TelegramSourceTelemetry] | None = None
+    unified_claims_by_day: tuple[DailyMeasurement, ...] = ()
+    fused_clusters_by_day: tuple[DailyMeasurement, ...] = ()
+    corroborated_claims_by_day: tuple[DailyMeasurement, ...] = ()
+    contradicted_claims_by_day: tuple[DailyMeasurement, ...] = ()
+    average_confirmation_lag_seconds: float = 0.0
+    source_domain_resolution_counts: dict[str, int] | None = None
 
 
 def measure_storage(session: Session) -> StorageTelemetry:
@@ -210,6 +223,13 @@ def measure_storage(session: Session) -> StorageTelemetry:
             TelegramReceiptModel,
             TelegramCheckpointModel,
             TelegramRunModel,
+            UnifiedClaimModel,
+            ClaimLineageModel,
+            ClaimCorroborationModel,
+            ClaimResolutionModel,
+            ClaimContradictionModel,
+            FusionScoreModel,
+            FusionReputationModel,
             TrendDivergenceModel,
             StructuralTrendModel,
             GeopoliticalEventModel,
@@ -394,6 +414,36 @@ def measure_storage(session: Session) -> StorageTelemetry:
                 post.post_id in row.supporting_post_ids
                 for row in session.scalars(select(NarrativeCandidateModel))
             )
+    fusion_claim_days: dict[date, int] = {}
+    claim_rows = tuple(session.scalars(select(UnifiedClaimModel)))
+    for claim in claim_rows:
+        claim_day = claim.first_observed_at.date()
+        fusion_claim_days[claim_day] = fusion_claim_days.get(claim_day, 0) + 1
+    cluster_days: dict[date, int] = {}
+    for lineage in session.scalars(select(ClaimLineageModel)):
+        lineage_day = lineage.observed_at.date()
+        cluster_days[lineage_day] = cluster_days.get(lineage_day, 0) + 1
+    corroborated_days: dict[date, int] = {}
+    contradicted_days: dict[date, int] = {}
+    confirmation_lags: list[float] = []
+    source_domain_counts: dict[str, int] = {}
+    for resolution in session.scalars(select(ClaimResolutionModel)):
+        resolution_day = resolution.resolved_at.date()
+        resolution_claim = session.get(UnifiedClaimModel, resolution.claim_id)
+        if resolution_claim is not None:
+            resolution_key = (
+                f"{resolution_claim.originating_source_id}:"
+                f"{resolution_claim.domain}:{resolution.outcome}"
+            )
+            source_domain_counts[resolution_key] = source_domain_counts.get(resolution_key, 0) + 1
+        if resolution.outcome in {"confirmed", "partially_confirmed"}:
+            corroborated_days[resolution_day] = corroborated_days.get(resolution_day, 0) + 1
+            if resolution_claim is not None:
+                confirmation_lags.append(
+                    (resolution.resolved_at - resolution_claim.first_observed_at).total_seconds()
+                )
+        elif resolution.outcome == "contradicted":
+            contradicted_days[resolution_day] = contradicted_days.get(resolution_day, 0) + 1
     return StorageTelemetry(
         raw_artifact_bytes=raw_bytes,
         database_record_counts=counts,
@@ -467,6 +517,14 @@ def measure_storage(session: Session) -> StorageTelemetry:
         social_duplicate_count=_count(session, SocialPropagationModel),
         social_coordination_count=_count(session, CoordinationCandidateModel),
         telegram_by_source=telegram_stats,
+        unified_claims_by_day=_measurements(fusion_claim_days),
+        fused_clusters_by_day=_measurements(cluster_days),
+        corroborated_claims_by_day=_measurements(corroborated_days),
+        contradicted_claims_by_day=_measurements(contradicted_days),
+        average_confirmation_lag_seconds=(
+            sum(confirmation_lags) / len(confirmation_lags) if confirmation_lags else 0.0
+        ),
+        source_domain_resolution_counts=source_domain_counts,
     )
 
 
