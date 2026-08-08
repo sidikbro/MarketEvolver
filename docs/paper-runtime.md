@@ -25,3 +25,8 @@ control writes an operator audit record. `step` without admitted signals records
 Current limitations: no order-book simulation, intraday scheduling, corporate-action automation,
 tax jurisdiction engine, optimizer, or background process. Benchmark values must be supplied from
 point-in-time market data by the caller.
+# Expert boundary
+
+Expert agents cannot call the paper package or construct order candidates. An assessment must first
+become a reviewed hypothesis and validated experiment signal before the deterministic governor can
+consider it.

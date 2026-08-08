@@ -333,3 +333,9 @@ The simulation-only runtime adds a strict boundary beneath research:
 The paper package has no provider/LLM imports. PostgreSQL holds immutable policies, portfolio
 versions, order state, fills, risk decisions, snapshots, and operator journal records. Parquet and
 DuckDB hold derived NAV history only. No broker or live execution interface exists.
+# v0.18 fixed expert research plane
+
+Fixed domain experts sit inside the Research Plane behind an audited read-only tool registry. Their
+capability manifests are separate from host grants. PostgreSQL stores immutable definitions,
+sessions, tool audits, assessments, routing, comparisons, and scorecards. Deterministic routing and
+skeptical panels do not change the validated-signal or paper-runtime boundary.

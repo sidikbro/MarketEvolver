@@ -246,3 +246,10 @@ sessions, corporate-action ambiguity, and corrupted NAV all fail closed. Long-on
 reconciliation prohibit synthetic shorts and negative cash. Risk relaxation and kill-state recovery
 require explicit audited operator action. The runtime contains no broker credentials or provider
 imports, so a research-plane compromise cannot grant execution permission.
+# v0.18 expert threats
+
+The expert boundary denies unlisted tools, cross-domain entities, future cutoffs, forbidden source
+classes, fabricated evidence, recommendation fields, and direct PaperOrder attempts. Evidence text
+is data, not instructions. Fixed definitions prevent agent creation and topology mutation. Suspended
+experts leave future routing without rewriting history. Anonymized cases document—but do not
+eliminate—pretraining leakage risk.

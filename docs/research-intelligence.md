@@ -99,3 +99,9 @@ market-evolver research trace <trace-id>
 - Ordinary news remains untrusted and is not included merely because a model mentions it.
 - Reviewer checks cannot establish causal truth, novelty, or whether information was priced in.
 - Pretraining may contain future knowledge; manifests and aliases cannot erase model weights.
+# Expert assessments
+
+v0.18 adds fixed specialist assessments without granting extra authority. Evidence is drawn through
+cutoff-aware read-only tools and remains attributable. Hypotheses still require temporal/provenance
+validation, skeptical review, and experiment validation. Versioned domain templates require missing
+data, contradictions, unsupported assumptions, and unknown expectations to be recorded explicitly.
