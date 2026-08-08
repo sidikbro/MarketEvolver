@@ -183,6 +183,9 @@ class ReplaySnapshot:
     news_ids: tuple[str, ...]
     fundamental_ids: tuple[str, ...]
     graph_version_ids: tuple[str, ...]
+    macro_observation_ids: tuple[str, ...] = ()
+    trend_ids: tuple[str, ...] = ()
+    structural_trend_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

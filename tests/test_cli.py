@@ -146,6 +146,25 @@ class CliTests(unittest.TestCase):
         self.assertEqual(parser.parse_args(["replay", "inspect", "run:1"]).run_id, "run:1")
         self.assertEqual(parser.parse_args(["benchmark", "report"]).benchmark_command, "report")
 
+    def test_macro_and_trend_commands_are_registered(self) -> None:
+        parser = build_parser()
+        self.assertEqual(
+            parser.parse_args(
+                ["macro", "series", "il.cpi", "--at", "2025-01-01T00:00:00Z"]
+            ).series_id,
+            "il.cpi",
+        )
+        self.assertEqual(
+            parser.parse_args(
+                ["trends", "calculate", "il.cpi", "--at", "2025-01-01T00:00:00Z"]
+            ).trends_command,
+            "calculate",
+        )
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            self.assertEqual(main(["macro", "source-list"]), 0)
+        self.assertIn("us.fred\tdisabled", output.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

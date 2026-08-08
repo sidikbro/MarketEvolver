@@ -28,6 +28,14 @@ from market_evolver.ingestion.runner import IngestionRunner
 from market_evolver.knowledge.repositories import SqlKnowledgeGraph
 from market_evolver.knowledge.schemas import EntityVersion
 from market_evolver.knowledge.seed import seed_knowledge_graph
+from market_evolver.macro.repository import SqlMacroRepository
+from market_evolver.macro.schemas import (
+    MacroCategory,
+    MacroObservation,
+    SeasonalAdjustment,
+    TrendHorizon,
+)
+from market_evolver.macro.trends import calculate_trend
 from market_evolver.market.schemas import AdjustmentStatus, MarketObservation, ObservationType
 from market_evolver.market.seed import seed_assets
 from market_evolver.market.store import MarketDataStore
@@ -197,6 +205,24 @@ def build_parser() -> argparse.ArgumentParser:
     benchmark_commands = benchmark.add_subparsers(dest="benchmark_command", required=True)
     benchmark_commands.add_parser("run")
     benchmark_commands.add_parser("report")
+    macro = commands.add_parser("macro")
+    macro_commands = macro.add_subparsers(dest="macro_command", required=True)
+    macro_commands.add_parser("source-list")
+    macro_ingest = macro_commands.add_parser("ingest")
+    macro_ingest.add_argument("path", type=Path)
+    macro_series = macro_commands.add_parser("series")
+    macro_series.add_argument("series_id")
+    macro_series.add_argument("--at")
+    trends = commands.add_parser("trends")
+    trend_commands = trends.add_subparsers(dest="trends_command", required=True)
+    trend_show = trend_commands.add_parser("show")
+    trend_show.add_argument("series_id")
+    trend_show.add_argument("--at")
+    trend_calculate = trend_commands.add_parser("calculate")
+    trend_calculate.add_argument("series_id")
+    trend_calculate.add_argument("--at", required=True)
+    trend_replay = trend_commands.add_parser("replay")
+    trend_replay.add_argument("--at", required=True)
     return parser
 
 
@@ -211,6 +237,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _news_source_list()
     if args.command == "policy" and args.policy_command == "source-list":
         return _policy_source_list()
+    if args.command == "macro" and args.macro_command == "source-list":
+        for source in DEFAULT_REGISTRY.list():
+            if source.source_type.value in {"central_bank", "national_statistics", "government"}:
+                print(
+                    f"{source.source_id}\t{'enabled' if source.enabled else 'disabled'}\t{source.name}"
+                )
+        return 0
 
     config = load_config(args.config)
     engine = create_postgres_engine(config.database)
@@ -261,6 +294,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _replay_command(args, config, session)
         if args.command == "benchmark":
             return _benchmark_command(args, config, session)
+        if args.command in {"macro", "trends"}:
+            return _macro_command(args, session)
         telemetry = measure_storage(session)
         print(
             json.dumps(
@@ -327,6 +362,15 @@ def main(argv: Sequence[str] | None = None) -> int:
                     "replay_cases": telemetry.replay_cases,
                     "replay_runtime_ms": telemetry.replay_runtime_ms,
                     "benchmark_artifact_bytes": telemetry.benchmark_artifact_bytes,
+                    "macro_observations_by_day": [
+                        {"day": item.day.isoformat(), "items": item.value}
+                        for item in telemetry.macro_observations_by_day
+                    ],
+                    "macro_series_count": telemetry.macro_series_count,
+                    "macro_revision_rate": telemetry.macro_revision_rate,
+                    "macro_raw_bytes": telemetry.macro_raw_bytes,
+                    "trend_calculations": telemetry.trend_calculations,
+                    "macro_replay_impact": telemetry.macro_replay_impact,
                 },
                 indent=2,
             )
@@ -1226,6 +1270,106 @@ def _benchmark_command(args: argparse.Namespace, config: AppConfig, session: Ses
         )
     )
     return 0
+
+
+def _macro_command(args: argparse.Namespace, session: Session) -> int:
+    repository = SqlMacroRepository(session)
+    cutoff = _parse_timestamp(args.at) if getattr(args, "at", None) else datetime.now(UTC)
+    if args.command == "macro" and args.macro_command == "ingest":
+        try:
+            document = json.loads(args.path.read_text(encoding="utf-8"))
+            if not isinstance(document, list):
+                raise TypeError
+            observations = tuple(_macro_observation_from_dict(item) for item in document)
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError) as exc:
+            raise GovernanceViolation("macro ingest file is malformed") from exc
+        inserted = sum(repository.add_observation(item) for item in observations)
+        session.commit()
+        print(
+            json.dumps(
+                {
+                    "items": len(observations),
+                    "inserted": inserted,
+                    "duplicates": len(observations) - inserted,
+                }
+            )
+        )
+        return 0
+    if args.command == "macro":
+        items = repository.observations_visible_at(args.series_id, cutoff)
+        print(json.dumps([_macro_dict(item) for item in items], indent=2))
+        return 0
+    if args.trends_command == "calculate":
+        observations = repository.observations_visible_at(args.series_id, cutoff)
+        created = []
+        for horizon in TrendHorizon:
+            trend = calculate_trend(observations, horizon, cutoff)
+            if repository.add_trend(trend):
+                created.append(trend.trend_id)
+        session.commit()
+        print(json.dumps({"trend_ids": created}))
+        return 0
+    if args.trends_command == "show":
+        trends = repository.trends_visible_at(args.series_id, cutoff)
+        print(json.dumps([asdict(item) for item in trends], default=str, indent=2))
+        return 0
+    output = {
+        series_id: [asdict(item) for item in repository.trends_visible_at(series_id, cutoff)]
+        for series_id in repository.series_ids()
+    }
+    print(json.dumps(output, default=str, indent=2))
+    return 0
+
+
+def _macro_observation_from_dict(item: object) -> MacroObservation:
+    if not isinstance(item, dict):
+        raise TypeError
+    return MacroObservation(
+        series_id=str(item["series_id"]),
+        source_id=str(item["source_id"]),
+        geography=str(item["geography"]),
+        category=MacroCategory(item["category"]),
+        observation_period=str(item["observation_period"]),
+        value=str(item["value"]),
+        unit=str(item["unit"]),
+        published_at=_parse_timestamp(str(item["published_at"])),
+        first_observed_at=_parse_timestamp(str(item["first_observed_at"])),
+        revision_of=None if item.get("revision_of") is None else str(item["revision_of"]),
+        seasonal_adjustment=SeasonalAdjustment(item["seasonal_adjustment"]),
+        provenance=tuple(str(value) for value in item["provenance"]),
+        parser_version=str(item["parser_version"]),
+        name_en=str(item["name_en"]),
+        name_he=None if item.get("name_he") is None else str(item["name_he"]),
+        prior_value=None if item.get("prior_value") is None else str(item["prior_value"]),
+        expected_value=None if item.get("expected_value") is None else str(item["expected_value"]),
+        expectation_source=None
+        if item.get("expectation_source") is None
+        else str(item["expectation_source"]),
+        expectation_observed_at=(
+            None
+            if item.get("expectation_observed_at") is None
+            else _parse_timestamp(str(item["expectation_observed_at"]))
+        ),
+    )
+
+
+def _macro_dict(item: MacroObservation) -> dict[str, object]:
+    return {
+        "observation_id": item.observation_id,
+        "series_id": item.series_id,
+        "name_en": item.name_en,
+        "name_he": item.name_he,
+        "period": item.observation_period,
+        "value": item.value,
+        "unit": item.unit,
+        "published_at": item.published_at.isoformat(),
+        "first_observed_at": item.first_observed_at.isoformat(),
+        "revision_of": item.revision_of,
+        "seasonal_adjustment": item.seasonal_adjustment.value,
+        "expectation_status": item.expectation_status.value,
+        "surprise": item.surprise,
+        "provenance": item.provenance,
+    }
 
 
 def _market_observation_from_dict(item: object) -> MarketObservation:

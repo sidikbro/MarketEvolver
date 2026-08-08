@@ -35,6 +35,8 @@ from market_evolver.government.schemas import (
 from market_evolver.knowledge.repositories import SqlKnowledgeGraph
 from market_evolver.knowledge.schemas import EntityVersion, KnowledgeEntityType
 from market_evolver.knowledge.seed import seed_knowledge_graph
+from market_evolver.macro.repository import SqlMacroRepository
+from market_evolver.macro.schemas import MacroCategory, MacroObservation, SeasonalAdjustment
 from market_evolver.market.schemas import AdjustmentStatus, MarketObservation, ObservationType
 from market_evolver.market.seed import seed_assets
 from market_evolver.market.store import MarketDataStore
@@ -89,9 +91,9 @@ def migrated_engine(postgres_url: str):
         os.environ["MARKET_EVOLVER_DATABASE_URL"] = previous
 
 
-def test_migrations_reach_0009(migrated_engine) -> None:
+def test_migrations_reach_0010(migrated_engine) -> None:
     with migrated_engine.connect() as connection:
-        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0009"
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0010"
 
 
 def test_append_only_update_and_delete_are_rejected(migrated_engine) -> None:
@@ -511,4 +513,60 @@ def test_market_parquet_replay_cutoff_and_commitment_append_only(migrated_engine
         connection.execute(
             text("UPDATE replay_commitments SET confidence = 0.9 WHERE commitment_id = :id"),
             {"id": commitment_id},
+        )
+
+
+def test_macro_revision_cutoff_and_database_append_only(migrated_engine) -> None:
+    now = datetime.now(UTC)
+    token = uuid4().hex
+    with Session(migrated_engine) as session:
+        repository = SqlMacroRepository(session)
+        original = MacroObservation(
+            f"integration.cpi.{token}",
+            "il.cbs",
+            "IL",
+            MacroCategory.INFLATION,
+            "2025-01",
+            "100",
+            "index",
+            now - timedelta(hours=3),
+            now - timedelta(hours=2),
+            None,
+            SeasonalAdjustment.UNADJUSTED,
+            (f"source:{token}:1",),
+            "integration/1",
+            "Consumer Price Index",
+            "מדד המחירים לצרכן",
+        )
+        revised = MacroObservation(
+            original.series_id,
+            "il.cbs",
+            "IL",
+            MacroCategory.INFLATION,
+            "2025-01",
+            "101",
+            "index",
+            now - timedelta(hours=1),
+            now,
+            original.observation_id,
+            SeasonalAdjustment.UNADJUSTED,
+            (f"source:{token}:2",),
+            "integration/1",
+            "Consumer Price Index",
+            "מדד המחירים לצרכן",
+        )
+        repository.add_observation(original)
+        repository.add_observation(revised)
+        session.commit()
+        assert (
+            repository.observations_visible_at(original.series_id, now - timedelta(hours=1))[0]
+            == original
+        )
+        assert repository.observations_visible_at(original.series_id, now)[0] == revised
+        observation_id = original.observation_id
+
+    with pytest.raises(DBAPIError), migrated_engine.begin() as connection:
+        connection.execute(
+            text("UPDATE macro_observations SET value = '999' WHERE observation_id = :id"),
+            {"id": observation_id},
         )

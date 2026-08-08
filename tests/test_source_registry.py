@@ -26,6 +26,11 @@ class SourceRegistryTests(unittest.TestCase):
                 "il.competition",
                 "il.tax",
                 "us.sec.edgar",
+                "us.fred",
+                "eu.ecb.data",
+                "global.worldbank",
+                "global.oecd.sdmx",
+                "us.eia",
             },
         )
         self.assertTrue(DEFAULT_REGISTRY.get("il.boi").enabled)

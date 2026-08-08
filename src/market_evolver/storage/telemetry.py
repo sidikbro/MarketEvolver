@@ -35,6 +35,7 @@ from market_evolver.storage.models import (
     KnowledgeEntityModel,
     KnowledgeExposureModel,
     KnowledgeRelationshipModel,
+    MacroObservationModel,
     MarketObservationModel,
     MarketPartitionModel,
     NewsCandidateModel,
@@ -56,6 +57,9 @@ from market_evolver.storage.models import (
     ResearchReviewModel,
     ResearchTraceModel,
     SourceModel,
+    StructuralTrendModel,
+    TrendDivergenceModel,
+    TrendSignalModel,
 )
 
 
@@ -90,6 +94,12 @@ class StorageTelemetry:
     replay_cases: int = 0
     replay_runtime_ms: int = 0
     benchmark_artifact_bytes: int = 0
+    macro_observations_by_day: tuple[DailyMeasurement, ...] = ()
+    macro_series_count: int = 0
+    macro_revision_rate: float = 0.0
+    macro_raw_bytes: int = 0
+    trend_calculations: int = 0
+    macro_replay_impact: int = 0
 
 
 def measure_storage(session: Session) -> StorageTelemetry:
@@ -143,6 +153,10 @@ def measure_storage(session: Session) -> StorageTelemetry:
             ReplayRunModel,
             OutcomeEvaluationModel,
             BenchmarkPairModel,
+            MacroObservationModel,
+            TrendSignalModel,
+            TrendDivergenceModel,
+            StructuralTrendModel,
         )
     }
     raw_bytes = int(
@@ -217,6 +231,16 @@ def measure_storage(session: Session) -> StorageTelemetry:
     for partition in partitions:
         day = partition.created_at.date()
         parquet_bytes[day] = parquet_bytes.get(day, 0) + partition.size_bytes
+    macro_rows = tuple(session.scalars(select(MacroObservationModel)))
+    macro_by_day: dict[date, int] = {}
+    for macro_observation in macro_rows:
+        day = macro_observation.first_observed_at.date()
+        macro_by_day[day] = macro_by_day.get(day, 0) + 1
+    macro_artifacts = {
+        receipt.artifact_sha256
+        for receipt in session.scalars(select(RawIngestionModel))
+        if receipt.dataset.startswith("macro-")
+    }
     return StorageTelemetry(
         raw_artifact_bytes=raw_bytes,
         database_record_counts=counts,
@@ -261,6 +285,16 @@ def measure_storage(session: Session) -> StorageTelemetry:
             session.scalar(select(func.coalesce(func.sum(ReplayRunModel.runtime_ms), 0))) or 0
         ),
         benchmark_artifact_bytes=sum(item.size_bytes for item in partitions),
+        macro_observations_by_day=_measurements(macro_by_day),
+        macro_series_count=len({item.series_id for item in macro_rows}),
+        macro_revision_rate=(
+            sum(item.revision_of is not None for item in macro_rows) / len(macro_rows)
+            if macro_rows
+            else 0.0
+        ),
+        macro_raw_bytes=sum(artifact_sizes.get(key, 0) for key in macro_artifacts),
+        trend_calculations=_count(session, TrendSignalModel),
+        macro_replay_impact=_count(session, TrendSignalModel),
     )
 
 

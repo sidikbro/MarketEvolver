@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from market_evolver.company.repositories import SqlCompanyRepository
 from market_evolver.errors import IntegrityViolation
+from market_evolver.macro.repository import SqlMacroRepository
 from market_evolver.market.store import MarketDataStore
 from market_evolver.provenance import content_id
 from market_evolver.replay.repositories import SqlReplayRepository
@@ -126,6 +127,18 @@ class ReplayEngine:
                 cutoff,
             )
         )
+        macro = SqlMacroRepository(self.session)
+        macro_observations = tuple(
+            observation.observation_id
+            for series_id in macro.series_ids()
+            for observation in macro.observations_visible_at(series_id, cutoff)
+        )
+        trends = tuple(
+            trend.trend_id
+            for series_id in macro.series_ids()
+            for trend in macro.trends_visible_at(series_id, cutoff)
+        )
+        structural = tuple(item.structural_id for item in macro.structural_visible_at(cutoff))
         context_id = content_id(
             "replay-snapshot",
             {
@@ -136,10 +149,23 @@ class ReplayEngine:
                 "fundamentals": fundamentals,
                 "graph": graph,
                 "market": market_ids,
+                "macro": macro_observations,
+                "trends": trends,
+                "structural": structural,
             },
         )
         return ReplaySnapshot(
-            cutoff, context_id, market_ids, events, policies, news, fundamentals, graph
+            cutoff,
+            context_id,
+            market_ids,
+            events,
+            policies,
+            news,
+            fundamentals,
+            graph,
+            macro_observations,
+            trends,
+            structural,
         )
 
     def commit(self, item: ResearchCommitment) -> bool:

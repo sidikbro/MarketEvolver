@@ -902,6 +902,86 @@ class BenchmarkPairModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
+class MacroObservationModel(Base):
+    __tablename__ = "macro_observations"
+
+    observation_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    series_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    source_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    geography: Mapped[str] = mapped_column(String(32), nullable=False)
+    category: Mapped[str] = mapped_column(String(32), nullable=False)
+    observation_period: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    value: Mapped[str] = mapped_column(String(128), nullable=False)
+    unit: Mapped[str] = mapped_column(String(64), nullable=False)
+    published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    first_observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    revision_of: Mapped[str | None] = mapped_column(ForeignKey("macro_observations.observation_id"))
+    seasonal_adjustment: Mapped[str] = mapped_column(String(32), nullable=False)
+    provenance: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    parser_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    name_en: Mapped[str] = mapped_column(String(256), nullable=False)
+    name_he: Mapped[str | None] = mapped_column(String(256))
+    prior_value: Mapped[str | None] = mapped_column(String(128))
+    expected_value: Mapped[str | None] = mapped_column(String(128))
+    expectation_source: Mapped[str | None] = mapped_column(String(128))
+    expectation_observed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class TrendSignalModel(Base):
+    __tablename__ = "trend_signals"
+
+    trend_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    series_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    geography: Mapped[str] = mapped_column(String(32), nullable=False)
+    category: Mapped[str] = mapped_column(String(32), nullable=False)
+    horizon: Mapped[str] = mapped_column(String(16), nullable=False)
+    state: Mapped[str] = mapped_column(String(32), nullable=False)
+    as_of_period: Mapped[str] = mapped_column(String(32), nullable=False)
+    calculated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    calculation_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    input_observation_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    slope: Mapped[str | None] = mapped_column(String(128))
+    rolling_mean: Mapped[str | None] = mapped_column(String(128))
+    z_score: Mapped[str | None] = mapped_column(String(128))
+    mechanism_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+
+
+class TrendDivergenceModel(Base):
+    __tablename__ = "trend_divergences"
+
+    divergence_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    left_trend_id: Mapped[str] = mapped_column(ForeignKey("trend_signals.trend_id"), nullable=False)
+    right_trend_id: Mapped[str] = mapped_column(
+        ForeignKey("trend_signals.trend_id"), nullable=False
+    )
+    description: Mapped[str] = mapped_column(String, nullable=False)
+    observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    provenance_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+
+
+class StructuralTrendModel(Base):
+    __tablename__ = "structural_trends"
+
+    structural_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    name: Mapped[str] = mapped_column(String(256), nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=False)
+    geography: Mapped[str] = mapped_column(String(32), nullable=False)
+    valid_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    valid_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    first_observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    evidence_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    mechanism_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    curated: Mapped[bool] = mapped_column(nullable=False)
+
+
 def _forbid_mutation(_mapper: Any, _connection: Any, target: Any) -> None:
     raise ImmutableRecordError(
         f"{type(target).__name__} {getattr(target, 'provenance_id', '')} is immutable"
@@ -950,6 +1030,10 @@ for _model in (
     ReplayRunModel,
     OutcomeEvaluationModel,
     BenchmarkPairModel,
+    MacroObservationModel,
+    TrendSignalModel,
+    TrendDivergenceModel,
+    StructuralTrendModel,
     SourceModel,
     EvidenceModel,
     EventModel,

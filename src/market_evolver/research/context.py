@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from market_evolver.company.repositories import SqlCompanyRepository
 from market_evolver.errors import IntegrityViolation
+from market_evolver.macro.repository import SqlMacroRepository
 from market_evolver.research.schemas import ContextItem, ResearchContext
 from market_evolver.storage.models import (
     CanonicalEventModel,
@@ -145,6 +146,41 @@ class ResearchContextBuilder:
                         f"{relationship.target_entity}; version={relationship.version}; "
                         f"provenance={relationship.provenance}"
                     ),
+                )
+            )
+        macro = SqlMacroRepository(self.session)
+        for series_id in macro.series_ids():
+            for observation in macro.observations_visible_at(series_id, at):
+                items.append(
+                    ContextItem(
+                        "macro_observation",
+                        observation.observation_id,
+                        observation.first_observed_at,
+                        (
+                            f"{observation.name_en} {observation.observation_period}: "
+                            f"{observation.value} {observation.unit}"
+                        ),
+                        observation.provenance,
+                    )
+                )
+            for trend in macro.trends_visible_at(series_id, at):
+                items.append(
+                    ContextItem(
+                        "macro_trend",
+                        trend.trend_id,
+                        trend.calculated_at,
+                        f"{series_id} {trend.horizon.value}: {trend.state.value}",
+                        trend.input_observation_ids,
+                    )
+                )
+        for structural_trend in macro.structural_visible_at(at):
+            items.append(
+                ContextItem(
+                    "structural_trend",
+                    structural_trend.structural_id,
+                    structural_trend.first_observed_at,
+                    f"Curated structural candidate: {structural_trend.name}",
+                    structural_trend.evidence_ids,
                 )
             )
         for evidence_id in sorted(evidence_ids):
