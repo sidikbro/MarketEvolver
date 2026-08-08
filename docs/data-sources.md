@@ -130,3 +130,19 @@ social platforms. Adding metadata never authorizes ingestion or execution.
 Registry presence is not enablement. v0.11 made no live request to these
 sources. The already reviewed BOI FX and policy endpoints remain enabled, but
 their current responses are not treated as complete historical macro archives.
+
+## Geopolitical source candidates (v0.12)
+
+| Registry ID | Class | Status | Limitation |
+| --- | --- | --- | --- |
+| `il.pmo.statements` | Official Israeli government | Disabled | No reviewed immutable statement/revision feed |
+| `il.idf.statements` | Official Israeli security statements | Disabled | Operational updates and corrections lack an approved machine contract |
+| `us.state.statements` | Foreign-government statements | Disabled | Feed/page revision and retention semantics require review |
+| `global.un.press` | International institution | Disabled | Correction and publication-time contract requires review |
+| `global.icao` | Aviation authority | Disabled | No approved cancellation/capacity historical API |
+| `global.imo` | Shipping authority | Disabled | No approved route-disruption historical API |
+| `global.iea` | Energy institution | Disabled | Licensing and release-vintage semantics require review |
+| `uk.bbc.business` | Established global news | Enabled | Untrusted content; RSS edits are locally versioned and require corroboration |
+
+The disabled aviation, shipping, and energy interfaces perform no fetch. Source
+registration never authorizes network access or canonical event promotion.

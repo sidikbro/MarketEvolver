@@ -1,8 +1,8 @@
 # MarketEvolver
 
-MarketEvolver is a governed financial-market research laboratory. Version 0.11
-adds immutable revision-aware macro observations, deterministic multi-horizon
-trend intelligence, and point-in-time macro replay.
+MarketEvolver is a governed financial-market research laboratory. Version 0.12
+adds uncertain, revision-aware geopolitical events and direction-neutral
+economic transmission candidates with point-in-time replay.
 
 This repository intentionally contains **no trading bot**, broker integration,
 order placement, leverage, options, or real-money execution capability.
@@ -62,6 +62,9 @@ market-evolver macro source-list
 market-evolver macro series il.cpi.headline --at 2025-01-02T12:00:00+00:00
 market-evolver trends calculate il.cpi.headline --at 2025-01-02T12:00:00+00:00
 market-evolver trends replay --at 2025-01-02T12:00:00+00:00
+market-evolver geopolitical source-list
+market-evolver geopolitical replay --at 2025-01-02T12:00:00+00:00
+market-evolver geopolitical baseline --at 2025-01-02T12:00:00+00:00
 ```
 
 External ingestion also requires `network_access = true` in trusted runtime
@@ -74,5 +77,6 @@ See [Architecture](docs/architecture.md), [Threat model](docs/threat-model.md),
 [Company fundamentals](docs/company-fundamentals.md),
 [Research intelligence](docs/research-intelligence.md),
 [Market data](docs/market-data.md), [Historical replay](docs/historical-replay.md), and
-[Replay benchmark](docs/benchmark.md), [Macro Lab](docs/macro-lab.md), and
-[Trends Lab](docs/trends-lab.md).
+[Replay benchmark](docs/benchmark.md), [Macro Lab](docs/macro-lab.md),
+[Trends Lab](docs/trends-lab.md), and
+[Geopolitical Lab](docs/geopolitical-lab.md).

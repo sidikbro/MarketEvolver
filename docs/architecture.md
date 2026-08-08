@@ -59,6 +59,9 @@ Israel market ontology on top of the evidence and event layers.
 18. **Macro and trends** stores source-release vintages separately from
     deterministic trend calculations, preserves disagreement, and injects only
     cutoff-visible macro state into research and replay.
+19. **Geopolitical intelligence** separates extracted candidates, governed
+    promotion, immutable event versions, timed corroboration, and independently
+    provenanced multi-horizon economic-transmission paths.
 
 ```text
 fetch -> local first_observed_at + SHA-256 -> immutable raw artifact + receipt
@@ -279,6 +282,20 @@ Research contexts and replay snapshots include cutoff-visible macro, trend, and
 structural records. They do not rebuild historical state from the current value
 of an external API. Direction-neutral mechanism mappings connect trend families
 to the existing knowledge vocabulary without asserting asset direction.
+
+## Geopolitical intelligence
+
+Alembic revision `0011` adds geopolitical candidates, separate review records,
+immutable canonical event versions, transmission paths, and corroboration.
+Current queries hide an earlier version only after its revision becomes locally
+visible; direct lookup retains the original. Conflicting event lineages are not
+merged merely because their text or topic is similar.
+
+Candidate extraction is phrase-based and intentionally narrow. Canonicalization
+requires a governed promotion record. Transmission paths validate against the
+direction-neutral mechanism registry and preserve horizon, confidence, cutoff
+validity, rationale, and provenance. Research and replay expose uncertainty and
+contradictions as data rather than selecting one narrative silently.
 
 ## Governance
 

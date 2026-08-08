@@ -74,6 +74,12 @@ configuration.
 | Seasonal and raw series are mixed | Seasonal-adjustment class is part of revision identity and trend inputs cannot mix classes |
 | Missing expectations become fabricated surprises | Missing expectation is explicitly unknown; value, source, and observed time are atomic |
 | Trend direction becomes an investment instruction | Trend states and mechanism mappings are direction-neutral research observations |
+| Rumor is silently promoted to geopolitical fact | Extraction creates a candidate; canonical promotion requires a separate auditable review |
+| Later confirmation or outcome leaks backward | Confirmation, contradiction, resolution, and revision are append-only records gated by local observation time |
+| Syndicated reports appear independent | Same publisher or normalized fingerprint is classified as syndication, not corroboration |
+| Conflicting reports are collapsed | Official contradiction and unresolved conflict remain explicit timed records |
+| Human harm is optimized as a market opportunity | Casualty/outcome forecasting, political-intent inference, trade direction, and allocation are excluded |
+| Candidate mechanism becomes asserted causation | Paths retain candidate status, horizon, confidence, rationale, and provenance separately from events |
 | Database downgrade or misdirection | Explicit PostgreSQL URL, mandatory configuration, TLS default, versioned Alembic migration |
 | Mutation through ORM or direct SQL | ORM hooks fail and PostgreSQL triggers reject updates/deletes; production roles remain least-privilege |
 | Prompt injection in news/social text | Content is data, not instructions; labs expose evidence only |
@@ -173,6 +179,13 @@ preserve only vintages actually observed. Deterministic slopes and anomaly
 scores describe their inputs but do not establish causation or predict asset
 returns. Curated structural themes are hypotheses subject to selection bias and
 must not be presented as automatically detected facts.
+
+Geopolitical reporting is incomplete, adversarial, rapidly revised, translated,
+and sometimes intentionally deceptive. Official statements can also be partial
+or corrected. Source authority does not establish complete truth. The lab can
+preserve observed uncertainty and timing but cannot verify battlefield facts,
+intent, casualties, or conflict outcomes. Its curated transmission registry is
+an analytical vocabulary, not proof of causality or market impact.
 
 Company seed data can become stale through ticker changes, delistings, mergers,
 or classification changes. It is curated rather than a complete security master

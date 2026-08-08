@@ -11,6 +11,12 @@ later than `T`. Publisher dates and reconstructed market or macro periods cannot
 grant earlier visibility. A later macro revision replaces current query output
 but never changes an earlier replay snapshot.
 
+Geopolitical snapshots similarly retain the confirmation state, candidate
+mechanism paths, and contradictions known at `T`. A rumor visible at `T1` remains
+a rumor in that replay even if an official confirmation or contradiction arrives
+at `T2`. Reopenings, ceasefire violations, sanctions amendments, and resolutions
+append versions rather than overwriting the earlier state.
+
 Before advancing, the engine requires an immutable research commitment bound to
 the current case and timestamp. It records the context manifest, hypothesis,
 horizon, measurable outcome, falsification criterion, confidence, reviewer
