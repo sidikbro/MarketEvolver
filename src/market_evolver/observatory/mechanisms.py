@@ -126,5 +126,58 @@ DEFAULT_MECHANISM_REGISTRY = MechanismRegistry(
             "Supply-chain disruption",
             "Interruptions to sourcing, production, logistics, or delivery.",
         ),
+        CausalMechanism(
+            "airline_capacity",
+            "Airline capacity",
+            "Changes in available passenger or cargo flight capacity.",
+        ),
+        CausalMechanism(
+            "shipping_cost",
+            "Shipping cost",
+            "Changes in the cost of maritime or other freight transport.",
+        ),
+        CausalMechanism(
+            "freight_delay", "Freight delay", "Changes in transit time or delivery reliability."
+        ),
+        CausalMechanism(
+            "insurance_cost",
+            "Insurance cost",
+            "Changes in insurance availability, exclusions, or premiums.",
+        ),
+        CausalMechanism(
+            "reserve_mobilization",
+            "Reserve mobilization",
+            "Explicit mobilization affecting labor and public resources.",
+        ),
+        CausalMechanism(
+            "sovereign_risk_premium",
+            "Sovereign risk premium",
+            "Changes in compensation associated with sovereign funding risk.",
+        ),
+        CausalMechanism(
+            "foreign_capital_flow",
+            "Foreign capital flow",
+            "Changes in cross-border capital availability or movement.",
+        ),
+        CausalMechanism(
+            "currency_pressure",
+            "Currency pressure",
+            "Pressure on currency demand or supply without asserting price direction.",
+        ),
+        CausalMechanism(
+            "export_restriction",
+            "Export restriction",
+            "Explicit constraints on export availability or eligibility.",
+        ),
+        CausalMechanism(
+            "import_availability",
+            "Import availability",
+            "Changes in access to imported goods or inputs.",
+        ),
+        CausalMechanism(
+            "construction_activity",
+            "Construction activity",
+            "Changes in the feasible pace or volume of construction work.",
+        ),
     )
 )

@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from market_evolver.company.repositories import SqlCompanyRepository
 from market_evolver.errors import IntegrityViolation
+from market_evolver.geopolitical.repository import SqlGeopoliticalRepository
 from market_evolver.macro.repository import SqlMacroRepository
 from market_evolver.market.store import MarketDataStore
 from market_evolver.provenance import content_id
@@ -139,6 +140,16 @@ class ReplayEngine:
             for trend in macro.trends_visible_at(series_id, cutoff)
         )
         structural = tuple(item.structural_id for item in macro.structural_visible_at(cutoff))
+        geopolitical = SqlGeopoliticalRepository(self.session)
+        geopolitical_events = geopolitical.events_visible_at(cutoff)
+        geopolitical_event_ids = tuple(item.event_id for item in geopolitical_events)
+        geopolitical_paths = tuple(
+            item.path_id
+            for item in geopolitical.paths_visible_at(cutoff, event_ids=geopolitical_event_ids)
+        )
+        geopolitical_corroborations = tuple(
+            item.corroboration_id for item in geopolitical.corroborations_visible_at(cutoff)
+        )
         context_id = content_id(
             "replay-snapshot",
             {
@@ -152,6 +163,9 @@ class ReplayEngine:
                 "macro": macro_observations,
                 "trends": trends,
                 "structural": structural,
+                "geopolitical_events": geopolitical_event_ids,
+                "geopolitical_paths": geopolitical_paths,
+                "geopolitical_corroborations": geopolitical_corroborations,
             },
         )
         return ReplaySnapshot(
@@ -166,6 +180,9 @@ class ReplayEngine:
             macro_observations,
             trends,
             structural,
+            geopolitical_event_ids,
+            geopolitical_paths,
+            geopolitical_corroborations,
         )
 
     def commit(self, item: ResearchCommitment) -> bool:

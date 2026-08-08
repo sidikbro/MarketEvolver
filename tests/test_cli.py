@@ -165,6 +165,20 @@ class CliTests(unittest.TestCase):
             self.assertEqual(main(["macro", "source-list"]), 0)
         self.assertIn("us.fred\tdisabled", output.getvalue())
 
+    def test_geopolitical_commands_and_source_list_are_registered(self) -> None:
+        parser = build_parser()
+        replay = parser.parse_args(["geopolitical", "replay", "--at", "2025-01-01T00:00:00Z"])
+        self.assertEqual(replay.geopolitical_command, "replay")
+        self.assertEqual(
+            parser.parse_args(["geopolitical", "show", "geo:1"]).event_id,
+            "geo:1",
+        )
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            self.assertEqual(main(["geopolitical", "source-list"]), 0)
+        self.assertIn("global.icao\tdisabled", output.getvalue())
+        self.assertIn("uk.bbc.business\tenabled", output.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

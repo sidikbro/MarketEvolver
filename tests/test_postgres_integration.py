@@ -26,6 +26,18 @@ from market_evolver.company.schemas import (
     RestatementStatus,
 )
 from market_evolver.company.seed import seed_companies
+from market_evolver.geopolitical.extraction import extract_candidate
+from market_evolver.geopolitical.repository import SqlGeopoliticalRepository
+from market_evolver.geopolitical.schemas import (
+    ConfirmationState,
+    CorroborationKind,
+    GeopoliticalCorroboration,
+    GeopoliticalEvent,
+    GeopoliticalEventType,
+    GeopoliticalStatus,
+    TransmissionHorizon,
+    TransmissionPath,
+)
 from market_evolver.government.repositories import SqlGovernmentRepository
 from market_evolver.government.schemas import (
     GovernmentAction,
@@ -61,7 +73,7 @@ from market_evolver.research.schemas import ContextItem, ResearchContext
 from market_evolver.research.service import ResearchService
 from market_evolver.schemas import Evidence, Source, SourceKind, TrustLevel
 from market_evolver.sources.registry import TrustClass
-from market_evolver.storage.models import ArtifactModel
+from market_evolver.storage.models import ArtifactModel, EvidenceModel
 from market_evolver.storage.repositories import SqlEvidenceRepository, SqlSourceRepository
 
 pytestmark = pytest.mark.postgres
@@ -91,9 +103,9 @@ def migrated_engine(postgres_url: str):
         os.environ["MARKET_EVOLVER_DATABASE_URL"] = previous
 
 
-def test_migrations_reach_0010(migrated_engine) -> None:
+def test_migrations_reach_0011(migrated_engine) -> None:
     with migrated_engine.connect() as connection:
-        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0010"
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0011"
 
 
 def test_append_only_update_and_delete_are_rejected(migrated_engine) -> None:
@@ -569,4 +581,100 @@ def test_macro_revision_cutoff_and_database_append_only(migrated_engine) -> None
         connection.execute(
             text("UPDATE macro_observations SET value = '999' WHERE observation_id = :id"),
             {"id": observation_id},
+        )
+
+
+def test_geopolitical_confirmation_contradiction_paths_and_append_only(migrated_engine) -> None:
+    now = datetime.now(UTC)
+    t1 = now - timedelta(hours=2)
+    t2 = now - timedelta(hours=1)
+    token = uuid4().hex
+    rumor_id = f"integration-geo-rumor:{token}"
+    official_id = f"integration-geo-official:{token}"
+    with Session(migrated_engine) as session:
+        for evidence_id, observed, claim in (
+            (rumor_id, t1, "Israel airport closed"),
+            (official_id, t2, "Official confirmation of closure"),
+        ):
+            session.add(
+                EvidenceModel(
+                    provenance_id=evidence_id,
+                    claim=claim,
+                    source_ids=[f"source:{evidence_id}"],
+                    observed_at=observed,
+                    excerpt_digest=f"sha256:{'b' * 64}",
+                    embedding=None,
+                )
+            )
+        session.flush()
+        repository = SqlGeopoliticalRepository(session)
+        rumor = GeopoliticalEvent(
+            GeopoliticalEventType.AIRSPACE_DISRUPTION,
+            ("Israel",),
+            ("Israel",),
+            (rumor_id,),
+            GeopoliticalStatus.REPORTED,
+            t1,
+            t1,
+            t1,
+            None,
+            0.5,
+            ConfirmationState.UNVERIFIED,
+            None,
+            (rumor_id,),
+            1,
+        )
+        confirmed = GeopoliticalEvent(
+            rumor.event_type,
+            rumor.geography,
+            rumor.actors,
+            (official_id,),
+            GeopoliticalStatus.ONGOING,
+            t1,
+            t1,
+            t2,
+            None,
+            0.9,
+            ConfirmationState.CONFIRMED,
+            rumor.event_id,
+            (official_id,),
+            2,
+        )
+        repository.add_event(rumor)
+        repository.add_event(confirmed)
+        path = TransmissionPath(
+            confirmed.event_id,
+            ("airline_capacity", "tourism_demand"),
+            ("country.israel",),
+            TransmissionHorizon.IMMEDIATE,
+            0.8,
+            "Closure can constrain airline capacity.",
+            (official_id,),
+            t2,
+        )
+        repository.add_path(path)
+        candidate = extract_candidate("Israel airport closed", rumor_id, t1)
+        repository.add_candidate(candidate)
+        contradiction = GeopoliticalCorroboration(
+            candidate.candidate_id,
+            (rumor_id, official_id),
+            ("news.integration", "official.integration"),
+            CorroborationKind.UNRESOLVED_CONFLICT,
+            t2,
+            "Official and news accounts conflict.",
+            0.5,
+        )
+        repository.add_corroboration(contradiction)
+        session.commit()
+        assert repository.events_visible_at(t1) == (rumor,)
+        assert repository.events_visible_at(t2) == (confirmed,)
+        assert repository.corroborations_visible_at(t1) == ()
+        assert repository.corroborations_visible_at(t2) == (contradiction,)
+        assert repository.paths_visible_at(t2, event_ids=(confirmed.event_id,)) == (path,)
+        event_id = rumor.event_id
+
+    with pytest.raises(DBAPIError), migrated_engine.begin() as connection:
+        connection.execute(
+            text("UPDATE geopolitical_events SET confidence = 0 WHERE event_id = :id"),
+            {"id": event_id},
         )

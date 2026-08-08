@@ -18,6 +18,9 @@ from market_evolver.company.schemas import CompanyVersion, Filing
 from market_evolver.company.seed import seed_companies
 from market_evolver.config import AppConfig, load_config
 from market_evolver.errors import GovernanceViolation
+from market_evolver.geopolitical.baselines import calculate_baseline
+from market_evolver.geopolitical.extraction import extract_candidate
+from market_evolver.geopolitical.repository import SqlGeopoliticalRepository
 from market_evolver.government.connectors import BankOfIsraelPolicyConnector
 from market_evolver.government.extraction import extract_policy_candidate
 from market_evolver.government.repositories import SqlGovernmentRepository
@@ -223,6 +226,20 @@ def build_parser() -> argparse.ArgumentParser:
     trend_calculate.add_argument("--at", required=True)
     trend_replay = trend_commands.add_parser("replay")
     trend_replay.add_argument("--at", required=True)
+    geopolitical = commands.add_parser("geopolitical")
+    geopolitical_commands = geopolitical.add_subparsers(dest="geopolitical_command", required=True)
+    geopolitical_commands.add_parser("source-list")
+    geopolitical_list = geopolitical_commands.add_parser("list")
+    geopolitical_list.add_argument("--at")
+    geopolitical_show = geopolitical_commands.add_parser("show")
+    geopolitical_show.add_argument("event_id")
+    geopolitical_replay = geopolitical_commands.add_parser("replay")
+    geopolitical_replay.add_argument("--at", required=True)
+    geopolitical_extract = geopolitical_commands.add_parser("extract")
+    geopolitical_extract.add_argument("evidence_id")
+    geopolitical_extract.add_argument("--at", required=True)
+    geopolitical_baseline = geopolitical_commands.add_parser("baseline")
+    geopolitical_baseline.add_argument("--at", required=True)
     return parser
 
 
@@ -240,6 +257,23 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "macro" and args.macro_command == "source-list":
         for source in DEFAULT_REGISTRY.list():
             if source.source_type.value in {"central_bank", "national_statistics", "government"}:
+                print(
+                    f"{source.source_id}\t{'enabled' if source.enabled else 'disabled'}\t{source.name}"
+                )
+        return 0
+    if args.command == "geopolitical" and args.geopolitical_command == "source-list":
+        source_ids = {
+            "il.pmo.statements",
+            "il.idf.statements",
+            "us.state.statements",
+            "global.un.press",
+            "global.icao",
+            "global.imo",
+            "global.iea",
+            "uk.bbc.business",
+        }
+        for source in DEFAULT_REGISTRY.list():
+            if source.source_id in source_ids:
                 print(
                     f"{source.source_id}\t{'enabled' if source.enabled else 'disabled'}\t{source.name}"
                 )
@@ -296,6 +330,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _benchmark_command(args, config, session)
         if args.command in {"macro", "trends"}:
             return _macro_command(args, session)
+        if args.command == "geopolitical":
+            return _geopolitical_command(args, session)
         telemetry = measure_storage(session)
         print(
             json.dumps(
@@ -371,6 +407,28 @@ def main(argv: Sequence[str] | None = None) -> int:
                     "macro_raw_bytes": telemetry.macro_raw_bytes,
                     "trend_calculations": telemetry.trend_calculations,
                     "macro_replay_impact": telemetry.macro_replay_impact,
+                    "geopolitical_candidates_by_day": [
+                        {"day": item.day.isoformat(), "items": item.value}
+                        for item in telemetry.geopolitical_candidates_by_day
+                    ],
+                    "geopolitical_confirmed_by_day": [
+                        {"day": item.day.isoformat(), "items": item.value}
+                        for item in telemetry.geopolitical_confirmed_by_day
+                    ],
+                    "geopolitical_contradictions_by_day": [
+                        {"day": item.day.isoformat(), "items": item.value}
+                        for item in telemetry.geopolitical_contradictions_by_day
+                    ],
+                    "geopolitical_revisions_by_day": [
+                        {"day": item.day.isoformat(), "items": item.value}
+                        for item in telemetry.geopolitical_revisions_by_day
+                    ],
+                    "geopolitical_raw_bytes_by_day": [
+                        {"day": item.day.isoformat(), "bytes": item.value}
+                        for item in telemetry.geopolitical_raw_bytes_by_day
+                    ],
+                    "geopolitical_affected_mechanisms": telemetry.geopolitical_affected_mechanisms,
+                    "geopolitical_replay_inclusions": telemetry.geopolitical_replay_inclusions,
                 },
                 indent=2,
             )
@@ -1316,6 +1374,40 @@ def _macro_command(args: argparse.Namespace, session: Session) -> int:
     output = {
         series_id: [asdict(item) for item in repository.trends_visible_at(series_id, cutoff)]
         for series_id in repository.series_ids()
+    }
+    print(json.dumps(output, default=str, indent=2))
+    return 0
+
+
+def _geopolitical_command(args: argparse.Namespace, session: Session) -> int:
+    repository = SqlGeopoliticalRepository(session)
+    cutoff = _parse_timestamp(args.at) if getattr(args, "at", None) else datetime.now(UTC)
+    if args.geopolitical_command == "extract":
+        evidence = session.get(EvidenceModel, args.evidence_id)
+        if evidence is None or _parse_timestamp(evidence.observed_at.isoformat()) > cutoff:
+            raise GovernanceViolation("geopolitical extraction requires cutoff-visible evidence")
+        candidate = extract_candidate(evidence.claim, evidence.provenance_id, cutoff)
+        inserted = repository.add_candidate(candidate)
+        session.commit()
+        print(json.dumps({"candidate_id": candidate.candidate_id, "inserted": inserted}))
+        return 0
+    if args.geopolitical_command == "show":
+        event = repository.get(args.event_id)
+        if event is None:
+            print(json.dumps({"error": "geopolitical event not found"}))
+            return 1
+        print(json.dumps(asdict(event), default=str, indent=2))
+        return 0
+    events = repository.events_visible_at(cutoff)
+    paths = repository.paths_visible_at(cutoff, event_ids=tuple(item.event_id for item in events))
+    if args.geopolitical_command == "baseline":
+        print(json.dumps(asdict(calculate_baseline(events, paths, cutoff)), default=str, indent=2))
+        return 0
+    output = {
+        "cutoff": cutoff.isoformat(),
+        "events": [asdict(item) for item in events],
+        "paths": [asdict(item) for item in paths],
+        "corroborations": [asdict(item) for item in repository.corroborations_visible_at(cutoff)],
     }
     print(json.dumps(output, default=str, indent=2))
     return 0

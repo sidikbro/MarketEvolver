@@ -186,6 +186,9 @@ class ReplaySnapshot:
     macro_observation_ids: tuple[str, ...] = ()
     trend_ids: tuple[str, ...] = ()
     structural_trend_ids: tuple[str, ...] = ()
+    geopolitical_event_ids: tuple[str, ...] = ()
+    geopolitical_path_ids: tuple[str, ...] = ()
+    geopolitical_corroboration_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

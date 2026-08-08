@@ -982,6 +982,98 @@ class StructuralTrendModel(Base):
     curated: Mapped[bool] = mapped_column(nullable=False)
 
 
+class GeopoliticalEventModel(Base):
+    __tablename__ = "geopolitical_events"
+
+    event_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    event_type: Mapped[str] = mapped_column(String(48), nullable=False, index=True)
+    geography: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    actors: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    source_evidence_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    announced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    first_observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    confidence: Mapped[float] = mapped_column(nullable=False)
+    confirmation_state: Mapped[str] = mapped_column(String(32), nullable=False)
+    revision_of: Mapped[str | None] = mapped_column(ForeignKey("geopolitical_events.event_id"))
+    provenance: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class GeopoliticalCandidateModel(Base):
+    __tablename__ = "geopolitical_candidates"
+
+    candidate_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    source_evidence_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    event_type: Mapped[str | None] = mapped_column(String(48))
+    actors: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    geography: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    explicit_timestamps: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    mechanism_candidates: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    extraction_method: Mapped[str] = mapped_column(String(64), nullable=False)
+    confidence: Mapped[float] = mapped_column(nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    review_state: Mapped[str] = mapped_column(String(24), nullable=False)
+    supporting_spans: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+
+
+class GeopoliticalCandidateReviewModel(Base):
+    __tablename__ = "geopolitical_candidate_reviews"
+
+    review_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    candidate_id: Mapped[str] = mapped_column(
+        ForeignKey("geopolitical_candidates.candidate_id"), nullable=False, index=True
+    )
+    state: Mapped[str] = mapped_column(String(24), nullable=False)
+    reviewed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    reviewer: Mapped[str] = mapped_column(String(128), nullable=False)
+    rationale: Mapped[str] = mapped_column(String, nullable=False)
+
+
+class GeopoliticalTransmissionModel(Base):
+    __tablename__ = "geopolitical_transmission_paths"
+
+    path_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    event_id: Mapped[str] = mapped_column(
+        ForeignKey("geopolitical_events.event_id"), nullable=False, index=True
+    )
+    mechanisms: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    affected_entities: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    horizon: Mapped[str] = mapped_column(String(16), nullable=False)
+    confidence: Mapped[float] = mapped_column(nullable=False)
+    rationale: Mapped[str] = mapped_column(String, nullable=False)
+    provenance_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    valid_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class GeopoliticalCorroborationModel(Base):
+    __tablename__ = "geopolitical_corroborations"
+
+    corroboration_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    candidate_id: Mapped[str] = mapped_column(
+        ForeignKey("geopolitical_candidates.candidate_id"), nullable=False, index=True
+    )
+    evidence_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    source_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    rationale: Mapped[str] = mapped_column(String, nullable=False)
+    confidence: Mapped[float] = mapped_column(nullable=False)
+
+
 def _forbid_mutation(_mapper: Any, _connection: Any, target: Any) -> None:
     raise ImmutableRecordError(
         f"{type(target).__name__} {getattr(target, 'provenance_id', '')} is immutable"
@@ -1034,6 +1126,11 @@ for _model in (
     TrendSignalModel,
     TrendDivergenceModel,
     StructuralTrendModel,
+    GeopoliticalEventModel,
+    GeopoliticalCandidateModel,
+    GeopoliticalCandidateReviewModel,
+    GeopoliticalTransmissionModel,
+    GeopoliticalCorroborationModel,
     SourceModel,
     EvidenceModel,
     EventModel,

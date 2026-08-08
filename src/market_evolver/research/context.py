@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from market_evolver.company.repositories import SqlCompanyRepository
 from market_evolver.errors import IntegrityViolation
+from market_evolver.geopolitical.repository import SqlGeopoliticalRepository
 from market_evolver.macro.repository import SqlMacroRepository
 from market_evolver.research.schemas import ContextItem, ResearchContext
 from market_evolver.storage.models import (
@@ -181,6 +182,48 @@ class ResearchContextBuilder:
                     structural_trend.first_observed_at,
                     f"Curated structural candidate: {structural_trend.name}",
                     structural_trend.evidence_ids,
+                )
+            )
+        geopolitical = SqlGeopoliticalRepository(self.session)
+        geopolitical_events = geopolitical.events_visible_at(at)
+        geopolitical_event_ids = tuple(item.event_id for item in geopolitical_events)
+        for geopolitical_event in geopolitical_events:
+            evidence_ids.update(geopolitical_event.source_evidence_ids)
+            items.append(
+                ContextItem(
+                    "geopolitical_event",
+                    geopolitical_event.event_id,
+                    geopolitical_event.first_observed_at,
+                    (
+                        f"{geopolitical_event.event_type.value}; status={geopolitical_event.status.value}; "
+                        f"confirmation={geopolitical_event.confirmation_state.value}; "
+                        f"confidence={geopolitical_event.confidence}"
+                    ),
+                    geopolitical_event.source_evidence_ids,
+                )
+            )
+        for path in geopolitical.paths_visible_at(at, event_ids=geopolitical_event_ids):
+            items.append(
+                ContextItem(
+                    "geopolitical_mechanism_path",
+                    path.path_id,
+                    path.observed_at,
+                    (
+                        f"candidate path horizon={path.horizon.value}; "
+                        f"mechanisms={','.join(path.mechanisms)}; confidence={path.confidence}"
+                    ),
+                    path.provenance_ids,
+                )
+            )
+        for corroboration in geopolitical.corroborations_visible_at(at):
+            evidence_ids.update(corroboration.evidence_ids)
+            items.append(
+                ContextItem(
+                    "geopolitical_corroboration",
+                    corroboration.corroboration_id,
+                    corroboration.observed_at,
+                    f"{corroboration.kind.value}: {corroboration.rationale}",
+                    corroboration.evidence_ids,
                 )
             )
         for evidence_id in sorted(evidence_ids):

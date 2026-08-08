@@ -26,6 +26,11 @@ from market_evolver.storage.models import (
     EvidenceModel,
     FilingModel,
     FundamentalModel,
+    GeopoliticalCandidateModel,
+    GeopoliticalCandidateReviewModel,
+    GeopoliticalCorroborationModel,
+    GeopoliticalEventModel,
+    GeopoliticalTransmissionModel,
     GovernmentActionModel,
     GovernmentCandidateModel,
     GovernmentTransitionModel,
@@ -100,6 +105,13 @@ class StorageTelemetry:
     macro_raw_bytes: int = 0
     trend_calculations: int = 0
     macro_replay_impact: int = 0
+    geopolitical_candidates_by_day: tuple[DailyMeasurement, ...] = ()
+    geopolitical_confirmed_by_day: tuple[DailyMeasurement, ...] = ()
+    geopolitical_contradictions_by_day: tuple[DailyMeasurement, ...] = ()
+    geopolitical_revisions_by_day: tuple[DailyMeasurement, ...] = ()
+    geopolitical_raw_bytes_by_day: tuple[DailyMeasurement, ...] = ()
+    geopolitical_affected_mechanisms: dict[str, int] | None = None
+    geopolitical_replay_inclusions: int = 0
 
 
 def measure_storage(session: Session) -> StorageTelemetry:
@@ -157,6 +169,11 @@ def measure_storage(session: Session) -> StorageTelemetry:
             TrendSignalModel,
             TrendDivergenceModel,
             StructuralTrendModel,
+            GeopoliticalEventModel,
+            GeopoliticalCandidateModel,
+            GeopoliticalCandidateReviewModel,
+            GeopoliticalTransmissionModel,
+            GeopoliticalCorroborationModel,
         )
     }
     raw_bytes = int(
@@ -241,6 +258,34 @@ def measure_storage(session: Session) -> StorageTelemetry:
         for receipt in session.scalars(select(RawIngestionModel))
         if receipt.dataset.startswith("macro-")
     }
+    geopolitical_candidates: dict[date, int] = {}
+    for candidate in session.scalars(select(GeopoliticalCandidateModel)):
+        day = candidate.created_at.date()
+        geopolitical_candidates[day] = geopolitical_candidates.get(day, 0) + 1
+    geopolitical_confirmed: dict[date, int] = {}
+    geopolitical_revisions: dict[date, int] = {}
+    geopolitical_events = tuple(session.scalars(select(GeopoliticalEventModel)))
+    for geopolitical_event in geopolitical_events:
+        day = geopolitical_event.first_observed_at.date()
+        if geopolitical_event.confirmation_state == "confirmed":
+            geopolitical_confirmed[day] = geopolitical_confirmed.get(day, 0) + 1
+        if geopolitical_event.version > 1:
+            geopolitical_revisions[day] = geopolitical_revisions.get(day, 0) + 1
+    geopolitical_contradictions: dict[date, int] = {}
+    for corroboration in session.scalars(select(GeopoliticalCorroborationModel)):
+        if corroboration.kind in {"official_contradiction", "unresolved_conflict"}:
+            day = corroboration.observed_at.date()
+            geopolitical_contradictions[day] = geopolitical_contradictions.get(day, 0) + 1
+    geopolitical_mechanisms: dict[str, int] = {}
+    for path in session.scalars(select(GeopoliticalTransmissionModel)):
+        for mechanism in path.mechanisms:
+            geopolitical_mechanisms[mechanism] = geopolitical_mechanisms.get(mechanism, 0) + 1
+    geopolitical_artifacts: dict[date, set[str]] = {}
+    for receipt in session.scalars(select(RawIngestionModel)):
+        if receipt.dataset.startswith("geopolitical-"):
+            geopolitical_artifacts.setdefault(receipt.first_observed_at.date(), set()).add(
+                receipt.artifact_sha256
+            )
     return StorageTelemetry(
         raw_artifact_bytes=raw_bytes,
         database_record_counts=counts,
@@ -295,6 +340,18 @@ def measure_storage(session: Session) -> StorageTelemetry:
         macro_raw_bytes=sum(artifact_sizes.get(key, 0) for key in macro_artifacts),
         trend_calculations=_count(session, TrendSignalModel),
         macro_replay_impact=_count(session, TrendSignalModel),
+        geopolitical_candidates_by_day=_measurements(geopolitical_candidates),
+        geopolitical_confirmed_by_day=_measurements(geopolitical_confirmed),
+        geopolitical_contradictions_by_day=_measurements(geopolitical_contradictions),
+        geopolitical_revisions_by_day=_measurements(geopolitical_revisions),
+        geopolitical_raw_bytes_by_day=_measurements(
+            {
+                day: sum(artifact_sizes.get(digest, 0) for digest in digests)
+                for day, digests in geopolitical_artifacts.items()
+            }
+        ),
+        geopolitical_affected_mechanisms=dict(sorted(geopolitical_mechanisms.items())),
+        geopolitical_replay_inclusions=len(geopolitical_events),
     )
 
 

@@ -31,6 +31,13 @@ class SourceRegistryTests(unittest.TestCase):
                 "global.worldbank",
                 "global.oecd.sdmx",
                 "us.eia",
+                "il.pmo.statements",
+                "il.idf.statements",
+                "us.state.statements",
+                "global.un.press",
+                "global.icao",
+                "global.imo",
+                "global.iea",
             },
         )
         self.assertTrue(DEFAULT_REGISTRY.get("il.boi").enabled)
