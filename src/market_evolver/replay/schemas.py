@@ -189,6 +189,9 @@ class ReplaySnapshot:
     geopolitical_event_ids: tuple[str, ...] = ()
     geopolitical_path_ids: tuple[str, ...] = ()
     geopolitical_corroboration_ids: tuple[str, ...] = ()
+    social_post_ids: tuple[str, ...] = ()
+    narrative_candidate_ids: tuple[str, ...] = ()
+    rumor_claim_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

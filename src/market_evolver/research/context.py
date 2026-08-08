@@ -12,6 +12,7 @@ from market_evolver.errors import IntegrityViolation
 from market_evolver.geopolitical.repository import SqlGeopoliticalRepository
 from market_evolver.macro.repository import SqlMacroRepository
 from market_evolver.research.schemas import ContextItem, ResearchContext
+from market_evolver.social.repository import SqlSocialRepository
 from market_evolver.storage.models import (
     CanonicalEventModel,
     EvidenceModel,
@@ -224,6 +225,27 @@ class ResearchContextBuilder:
                     corroboration.observed_at,
                     f"{corroboration.kind.value}: {corroboration.rationale}",
                     corroboration.evidence_ids,
+                )
+            )
+        social = SqlSocialRepository(self.session)
+        for narrative in social.narratives_visible_at(at):
+            items.append(
+                ContextItem(
+                    "reviewed_social_narrative",
+                    narrative.candidate_id,
+                    narrative.earliest_observed_at,
+                    f"Narrative candidate, not fact: {narrative.proposition}",
+                    narrative.supporting_post_ids,
+                )
+            )
+        for rumor in social.rumors_visible_at(at):
+            items.append(
+                ContextItem(
+                    "social_rumor_claim",
+                    rumor.claim_id,
+                    rumor.first_observed_at,
+                    f"Rumor status={rumor.status.value}: {rumor.proposition}",
+                    rumor.official_evidence_ids + rumor.news_evidence_ids,
                 )
             )
         for evidence_id in sorted(evidence_ids):

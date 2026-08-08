@@ -72,6 +72,13 @@ from market_evolver.research.repositories import SqlResearchRepository
 from market_evolver.research.schemas import ContextItem, ResearchContext
 from market_evolver.research.service import ResearchService
 from market_evolver.schemas import Evidence, Source, SourceKind, TrustLevel
+from market_evolver.social.repository import SqlSocialRepository
+from market_evolver.social.schemas import (
+    Accessibility,
+    SocialSource,
+    SocialSourceType,
+    VerificationState,
+)
 from market_evolver.sources.registry import TrustClass
 from market_evolver.storage.models import ArtifactModel, EvidenceModel
 from market_evolver.storage.repositories import SqlEvidenceRepository, SqlSourceRepository
@@ -103,9 +110,9 @@ def migrated_engine(postgres_url: str):
         os.environ["MARKET_EVOLVER_DATABASE_URL"] = previous
 
 
-def test_migrations_reach_0011(migrated_engine) -> None:
+def test_migrations_reach_0012(migrated_engine) -> None:
     with migrated_engine.connect() as connection:
-        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0011"
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0012"
 
 
 def test_append_only_update_and_delete_are_rejected(migrated_engine) -> None:
@@ -677,4 +684,32 @@ def test_geopolitical_confirmation_contradiction_paths_and_append_only(migrated_
         connection.execute(
             text("UPDATE geopolitical_events SET confidence = 0 WHERE event_id = :id"),
             {"id": event_id},
+        )
+
+
+def test_social_source_append_only(migrated_engine) -> None:
+    now = datetime.now(UTC)
+    token = uuid4().hex
+    with Session(migrated_engine) as session:
+        source = SocialSource(
+            "fixture",
+            token,
+            "Public fixture",
+            None,
+            ("en",),
+            ("IL",),
+            SocialSourceType.PUBLIC_CHANNEL,
+            now,
+            now,
+            VerificationState.UNVERIFIED,
+            Accessibility.PUBLIC,
+            (f"fixture:{token}",),
+        )
+        SqlSocialRepository(session).add_source(source)
+        session.commit()
+        source_id = source.source_id
+    with pytest.raises(DBAPIError), migrated_engine.begin() as connection:
+        connection.execute(
+            text("UPDATE social_sources SET display_name='mutated' WHERE source_id=:id"),
+            {"id": source_id},
         )

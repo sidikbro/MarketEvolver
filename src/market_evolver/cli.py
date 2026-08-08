@@ -61,10 +61,15 @@ from market_evolver.research.providers import JsonHttpProvider, MockProvider, Re
 from market_evolver.research.repositories import SqlResearchRepository
 from market_evolver.research.schemas import AnonymizationMapping
 from market_evolver.research.service import ResearchService
+from market_evolver.social.repository import SqlSocialRepository
 from market_evolver.sources.registry import DEFAULT_REGISTRY
 from market_evolver.storage.artifacts import LocalArtifactStore
 from market_evolver.storage.database import create_postgres_engine
-from market_evolver.storage.models import EvidenceModel, GovernmentCandidateModel
+from market_evolver.storage.models import (
+    CoordinationCandidateModel,
+    EvidenceModel,
+    GovernmentCandidateModel,
+)
 from market_evolver.storage.telemetry import measure_storage
 
 
@@ -240,6 +245,24 @@ def build_parser() -> argparse.ArgumentParser:
     geopolitical_extract.add_argument("--at", required=True)
     geopolitical_baseline = geopolitical_commands.add_parser("baseline")
     geopolitical_baseline.add_argument("--at", required=True)
+    social = commands.add_parser("social")
+    social_commands = social.add_subparsers(dest="social_command", required=True)
+    social_commands.add_parser("source-list")
+    social_posts = social_commands.add_parser("posts")
+    social_posts.add_argument("--at")
+    social_narratives = social_commands.add_parser("narratives")
+    social_narratives.add_argument("--at")
+    social_rumor = social_commands.add_parser("rumor")
+    social_rumor.add_argument("claim_id")
+    social_rumor.add_argument("--at")
+    social_prop = social_commands.add_parser("propagation")
+    social_prop.add_argument("post_id")
+    social_prop.add_argument("--at", required=True)
+    social_rep = social_commands.add_parser("reputation")
+    social_rep.add_argument("source_id")
+    social_rep.add_argument("--domain", default="general_market")
+    social_rep.add_argument("--at", required=True)
+    social_commands.add_parser("coordination")
     return parser
 
 
@@ -277,6 +300,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 print(
                     f"{source.source_id}\t{'enabled' if source.enabled else 'disabled'}\t{source.name}"
                 )
+        return 0
+    if args.command == "social" and args.social_command == "source-list":
+        print("No live social sources enabled; only public synthetic fixtures are available.")
         return 0
 
     config = load_config(args.config)
@@ -332,6 +358,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _macro_command(args, session)
         if args.command == "geopolitical":
             return _geopolitical_command(args, session)
+        if args.command == "social":
+            return _social_command(args, session)
         telemetry = measure_storage(session)
         print(
             json.dumps(
@@ -1410,6 +1438,42 @@ def _geopolitical_command(args: argparse.Namespace, session: Session) -> int:
         "corroborations": [asdict(item) for item in repository.corroborations_visible_at(cutoff)],
     }
     print(json.dumps(output, default=str, indent=2))
+    return 0
+
+
+def _social_command(args: argparse.Namespace, session: Session) -> int:
+    repo = SqlSocialRepository(session)
+    cutoff = _parse_timestamp(args.at) if getattr(args, "at", None) else datetime.now(UTC)
+    values: tuple[object, ...]
+    if args.social_command == "posts":
+        values = repo.posts_visible_at(cutoff)
+    elif args.social_command == "narratives":
+        values = repo.narratives_visible_at(cutoff)
+    elif args.social_command == "rumor":
+        values = tuple(x for x in repo.rumors_visible_at(cutoff) if x.claim_id == args.claim_id)
+    elif args.social_command == "propagation":
+        values = repo.propagation(args.post_id, cutoff)
+    elif args.social_command == "reputation":
+        values = (repo.reputation_at(args.source_id, cutoff, args.domain),)
+    else:
+        values = tuple(
+            session.scalars(
+                select(CoordinationCandidateModel).where(
+                    CoordinationCandidateModel.observed_at <= cutoff
+                )
+            )
+        )
+    print(
+        json.dumps(
+            [
+                asdict(x) if hasattr(x, "__dataclass_fields__") else str(x)  # type: ignore[call-overload]
+                for x in values
+                if x is not None
+            ],
+            default=str,
+            indent=2,
+        )
+    )
     return 0
 
 

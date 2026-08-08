@@ -17,6 +17,7 @@ from market_evolver.storage.models import (
     CompanyExposureModel,
     CompanyModel,
     ContextManifestModel,
+    CoordinationCandidateModel,
     DerivedFundamentalModel,
     EventMechanismLinkModel,
     EventModel,
@@ -43,6 +44,7 @@ from market_evolver.storage.models import (
     MacroObservationModel,
     MarketObservationModel,
     MarketPartitionModel,
+    NarrativeCandidateModel,
     NewsCandidateModel,
     NewsCandidateReviewModel,
     NewsCorroborationModel,
@@ -61,6 +63,11 @@ from market_evolver.storage.models import (
     ResearchHypothesisModel,
     ResearchReviewModel,
     ResearchTraceModel,
+    RumorClaimModel,
+    SocialPostModel,
+    SocialPropagationModel,
+    SocialReputationModel,
+    SocialSourceModel,
     SourceModel,
     StructuralTrendModel,
     TrendDivergenceModel,
@@ -112,6 +119,12 @@ class StorageTelemetry:
     geopolitical_raw_bytes_by_day: tuple[DailyMeasurement, ...] = ()
     geopolitical_affected_mechanisms: dict[str, int] | None = None
     geopolitical_replay_inclusions: int = 0
+    social_posts_by_day: tuple[DailyMeasurement, ...] = ()
+    social_source_count: int = 0
+    social_narrative_count: int = 0
+    social_rumor_count: int = 0
+    social_duplicate_count: int = 0
+    social_coordination_count: int = 0
 
 
 def measure_storage(session: Session) -> StorageTelemetry:
@@ -167,6 +180,13 @@ def measure_storage(session: Session) -> StorageTelemetry:
             BenchmarkPairModel,
             MacroObservationModel,
             TrendSignalModel,
+            SocialSourceModel,
+            SocialPostModel,
+            NarrativeCandidateModel,
+            RumorClaimModel,
+            SocialPropagationModel,
+            CoordinationCandidateModel,
+            SocialReputationModel,
             TrendDivergenceModel,
             StructuralTrendModel,
             GeopoliticalEventModel,
@@ -286,6 +306,10 @@ def measure_storage(session: Session) -> StorageTelemetry:
             geopolitical_artifacts.setdefault(receipt.first_observed_at.date(), set()).add(
                 receipt.artifact_sha256
             )
+    social_days: dict[date, int] = {}
+    for social_post in session.scalars(select(SocialPostModel)):
+        day = social_post.first_observed_at.date()
+        social_days[day] = social_days.get(day, 0) + 1
     return StorageTelemetry(
         raw_artifact_bytes=raw_bytes,
         database_record_counts=counts,
@@ -352,6 +376,12 @@ def measure_storage(session: Session) -> StorageTelemetry:
         ),
         geopolitical_affected_mechanisms=dict(sorted(geopolitical_mechanisms.items())),
         geopolitical_replay_inclusions=len(geopolitical_events),
+        social_posts_by_day=_measurements(social_days),
+        social_source_count=_count(session, SocialSourceModel),
+        social_narrative_count=_count(session, NarrativeCandidateModel),
+        social_rumor_count=_count(session, RumorClaimModel),
+        social_duplicate_count=_count(session, SocialPropagationModel),
+        social_coordination_count=_count(session, CoordinationCandidateModel),
     )
 
 

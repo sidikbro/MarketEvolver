@@ -24,6 +24,7 @@ from market_evolver.replay.schemas import (
     ReplayStepMode,
     ResearchCommitment,
 )
+from market_evolver.social.repository import SqlSocialRepository
 from market_evolver.storage.models import (
     CanonicalEventModel,
     GovernmentActionModel,
@@ -150,6 +151,10 @@ class ReplayEngine:
         geopolitical_corroborations = tuple(
             item.corroboration_id for item in geopolitical.corroborations_visible_at(cutoff)
         )
+        social = SqlSocialRepository(self.session)
+        social_posts = tuple(item.post_id for item in social.posts_visible_at(cutoff))
+        narratives = tuple(item.candidate_id for item in social.narratives_visible_at(cutoff))
+        rumors = tuple(item.claim_id for item in social.rumors_visible_at(cutoff))
         context_id = content_id(
             "replay-snapshot",
             {
@@ -166,6 +171,9 @@ class ReplayEngine:
                 "geopolitical_events": geopolitical_event_ids,
                 "geopolitical_paths": geopolitical_paths,
                 "geopolitical_corroborations": geopolitical_corroborations,
+                "social_posts": social_posts,
+                "narratives": narratives,
+                "rumors": rumors,
             },
         )
         return ReplaySnapshot(
@@ -183,6 +191,9 @@ class ReplayEngine:
             geopolitical_event_ids,
             geopolitical_paths,
             geopolitical_corroborations,
+            social_posts,
+            narratives,
+            rumors,
         )
 
     def commit(self, item: ResearchCommitment) -> bool:

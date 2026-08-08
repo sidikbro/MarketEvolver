@@ -1074,6 +1074,145 @@ class GeopoliticalCorroborationModel(Base):
     confidence: Mapped[float] = mapped_column(nullable=False)
 
 
+class SocialSourceModel(Base):
+    __tablename__ = "social_sources"
+    source_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    platform: Mapped[str] = mapped_column(String(32), nullable=False)
+    native_source_id: Mapped[str] = mapped_column(String(256), nullable=False)
+    display_name: Mapped[str] = mapped_column(String(256), nullable=False)
+    canonical_uri: Mapped[str | None] = mapped_column(String(2048))
+    languages: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    geography: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    source_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    first_observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    verification_state: Mapped[str] = mapped_column(String(32), nullable=False)
+    accessibility: Mapped[str] = mapped_column(String(16), nullable=False)
+    provenance: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    active: Mapped[bool] = mapped_column(nullable=False)
+    __table_args__ = (
+        UniqueConstraint("platform", "native_source_id", name="uq_social_source_identity"),
+    )
+
+
+class SocialPostModel(Base):
+    __tablename__ = "social_posts"
+    post_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    platform: Mapped[str] = mapped_column(String(32), nullable=False)
+    source_id: Mapped[str] = mapped_column(
+        ForeignKey("social_sources.source_id"), nullable=False, index=True
+    )
+    native_post_id: Mapped[str] = mapped_column(String(256), nullable=False)
+    thread_parent_id: Mapped[str | None] = mapped_column(String(96))
+    reply_parent_id: Mapped[str | None] = mapped_column(String(96))
+    posted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    first_observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    original_text: Mapped[str] = mapped_column(String, nullable=False)
+    normalized_text: Mapped[str] = mapped_column(String, nullable=False)
+    language: Mapped[str] = mapped_column(String(16), nullable=False)
+    urls: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    mentions: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    quoted_source_id: Mapped[str | None] = mapped_column(String(96))
+    metrics: Mapped[list[list[Any]]] = mapped_column(JSON, nullable=False)
+    raw_artifact_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(71), nullable=False)
+    media_references: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    provenance: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    revision_of: Mapped[str | None] = mapped_column(ForeignKey("social_posts.post_id"))
+
+
+class NarrativeCandidateModel(Base):
+    __tablename__ = "narrative_candidates"
+    candidate_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    topics: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    entities: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    supporting_post_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    earliest_observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    proposition: Mapped[str] = mapped_column(String, nullable=False)
+    language: Mapped[str] = mapped_column(String(16), nullable=False)
+    extraction_method: Mapped[str] = mapped_column(String(64), nullable=False)
+    confidence: Mapped[float] = mapped_column(nullable=False)
+    corroboration_state: Mapped[str] = mapped_column(String(32), nullable=False)
+    contradiction_state: Mapped[str] = mapped_column(String(32), nullable=False)
+    lifecycle_state: Mapped[str] = mapped_column(String(16), nullable=False)
+    reviewed: Mapped[bool] = mapped_column(nullable=False)
+
+
+class RumorClaimModel(Base):
+    __tablename__ = "rumor_claims"
+    claim_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    proposition: Mapped[str] = mapped_column(String, nullable=False)
+    entities: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    origin_post_id: Mapped[str] = mapped_column(String(96), nullable=False)
+    first_observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    supporting_post_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    contradicting_post_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    official_evidence_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    news_evidence_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False)
+    revision_of: Mapped[str | None] = mapped_column(ForeignKey("rumor_claims.claim_id"))
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class SocialPropagationModel(Base):
+    __tablename__ = "social_propagation_edges"
+    edge_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    source_post_id: Mapped[str] = mapped_column(ForeignKey("social_posts.post_id"), nullable=False)
+    target_post_id: Mapped[str] = mapped_column(ForeignKey("social_posts.post_id"), nullable=False)
+    relation: Mapped[str] = mapped_column(String(32), nullable=False)
+    observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    provenance: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+
+
+class CoordinationCandidateModel(Base):
+    __tablename__ = "coordination_candidates"
+    coordination_candidate_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    post_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    source_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    features: Mapped[list[list[str]]] = mapped_column(JSON, nullable=False)
+    confidence: Mapped[float] = mapped_column(nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    provenance: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+
+
+class SocialReputationModel(Base):
+    __tablename__ = "social_reputation_snapshots"
+    snapshot_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    source_id: Mapped[str] = mapped_column(
+        ForeignKey("social_sources.source_id"), nullable=False, index=True
+    )
+    domain: Mapped[str] = mapped_column(String(32), nullable=False)
+    window_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    window_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    computed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    claims_originated: Mapped[int] = mapped_column(Integer, nullable=False)
+    confirmed: Mapped[int] = mapped_column(Integer, nullable=False)
+    contradicted: Mapped[int] = mapped_column(Integer, nullable=False)
+    unresolved: Mapped[int] = mapped_column(Integer, nullable=False)
+    median_confirmation_lead_seconds: Mapped[int | None] = mapped_column(Integer)
+    copy_rate: Mapped[float] = mapped_column(nullable=False)
+    original_content_rate: Mapped[float] = mapped_column(nullable=False)
+    sample_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    uncertainty: Mapped[str] = mapped_column(String(128), nullable=False)
+
+
 def _forbid_mutation(_mapper: Any, _connection: Any, target: Any) -> None:
     raise ImmutableRecordError(
         f"{type(target).__name__} {getattr(target, 'provenance_id', '')} is immutable"
@@ -1131,6 +1270,13 @@ for _model in (
     GeopoliticalCandidateReviewModel,
     GeopoliticalTransmissionModel,
     GeopoliticalCorroborationModel,
+    SocialSourceModel,
+    SocialPostModel,
+    NarrativeCandidateModel,
+    RumorClaimModel,
+    SocialPropagationModel,
+    CoordinationCandidateModel,
+    SocialReputationModel,
     SourceModel,
     EvidenceModel,
     EventModel,
