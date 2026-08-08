@@ -13,6 +13,8 @@ from market_evolver.storage.models import (
     AnonymizationMappingModel,
     ArtifactModel,
     AssetModel,
+    BacktestDatasetModel,
+    BacktestResultModel,
     BenchmarkPairModel,
     CanonicalEventModel,
     ClaimContradictionModel,
@@ -30,6 +32,8 @@ from market_evolver.storage.models import (
     EventTransitionModel,
     EvidenceContradictionModel,
     EvidenceModel,
+    ExperimentRegistryModel,
+    ExperimentSpecificationModel,
     FilingModel,
     FundamentalModel,
     FusionReputationModel,
@@ -80,6 +84,7 @@ from market_evolver.storage.models import (
     TelegramCheckpointModel,
     TelegramReceiptModel,
     TelegramRunModel,
+    TestSetAccessModel,
     TrendDivergenceModel,
     TrendSignalModel,
     UnifiedClaimModel,
@@ -158,6 +163,14 @@ class StorageTelemetry:
     contradicted_claims_by_day: tuple[DailyMeasurement, ...] = ()
     average_confirmation_lag_seconds: float = 0.0
     source_domain_resolution_counts: dict[str, int] | None = None
+    experiments_by_day: tuple[DailyMeasurement, ...] = ()
+    backtests_by_day: tuple[DailyMeasurement, ...] = ()
+    trades_simulated: int = 0
+    backtest_runtime_ms: int = 0
+    backtest_parquet_bytes_read: int = 0
+    rejected_experiments: int = 0
+    leakage_failures: int = 0
+    test_set_accesses: int = 0
 
 
 def measure_storage(session: Session) -> StorageTelemetry:
@@ -230,6 +243,11 @@ def measure_storage(session: Session) -> StorageTelemetry:
             ClaimContradictionModel,
             FusionScoreModel,
             FusionReputationModel,
+            ExperimentSpecificationModel,
+            BacktestDatasetModel,
+            BacktestResultModel,
+            TestSetAccessModel,
+            ExperimentRegistryModel,
             TrendDivergenceModel,
             StructuralTrendModel,
             GeopoliticalEventModel,
@@ -444,6 +462,16 @@ def measure_storage(session: Session) -> StorageTelemetry:
                 )
         elif resolution.outcome == "contradicted":
             contradicted_days[resolution_day] = contradicted_days.get(resolution_day, 0) + 1
+    experiment_days: dict[date, int] = {}
+    experiment_rows = tuple(session.scalars(select(ExperimentSpecificationModel)))
+    for experiment in experiment_rows:
+        experiment_day = experiment.created_at.date()
+        experiment_days[experiment_day] = experiment_days.get(experiment_day, 0) + 1
+    backtest_days: dict[date, int] = {}
+    backtest_rows = tuple(session.scalars(select(BacktestResultModel)))
+    for backtest in backtest_rows:
+        backtest_day = backtest.started_at.date()
+        backtest_days[backtest_day] = backtest_days.get(backtest_day, 0) + 1
     return StorageTelemetry(
         raw_artifact_bytes=raw_bytes,
         database_record_counts=counts,
@@ -525,6 +553,19 @@ def measure_storage(session: Session) -> StorageTelemetry:
             sum(confirmation_lags) / len(confirmation_lags) if confirmation_lags else 0.0
         ),
         source_domain_resolution_counts=source_domain_counts,
+        experiments_by_day=_measurements(experiment_days),
+        backtests_by_day=_measurements(backtest_days),
+        trades_simulated=sum(item.executed_trades for item in backtest_rows),
+        backtest_runtime_ms=sum(item.runtime_ms for item in backtest_rows),
+        backtest_parquet_bytes_read=sum(item.parquet_bytes_read for item in backtest_rows),
+        rejected_experiments=sum(
+            item.status in {"rejected", "invalid"} for item in experiment_rows
+        ),
+        leakage_failures=sum(
+            any("future" in reason or "leakage" in reason for reason in item.rejection_reasons)
+            for item in backtest_rows
+        ),
+        test_set_accesses=_count(session, TestSetAccessModel),
     )
 
 

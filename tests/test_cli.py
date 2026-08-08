@@ -213,6 +213,33 @@ class CliTests(unittest.TestCase):
         )
         self.assertEqual(reputation.reputation_command, "source")
 
+    def test_experiment_backtest_and_walkforward_commands_are_registered(self) -> None:
+        parser = build_parser()
+        self.assertEqual(
+            parser.parse_args(["experiment", "validate", "exp:1"]).experiment_id,
+            "exp:1",
+        )
+        run = parser.parse_args(
+            [
+                "backtest",
+                "run",
+                "exp:1",
+                "--signal-at",
+                "asset.xtae.nice=2025-01-01T08:00:00+00:00",
+                "--at",
+                "2025-02-01T00:00:00+00:00",
+            ]
+        )
+        self.assertEqual(run.backtest_command, "run")
+        self.assertEqual(
+            parser.parse_args(["backtest", "compare", "run:a", "run:b"]).run_b,
+            "run:b",
+        )
+        self.assertEqual(
+            parser.parse_args(["walkforward", "run", "exp:1"]).experiment_id,
+            "exp:1",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

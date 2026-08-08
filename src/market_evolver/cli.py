@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 from collections.abc import Sequence
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import UTC, datetime
+from decimal import Decimal
 from pathlib import Path
 
 from sqlalchemy import select
@@ -18,6 +20,26 @@ from market_evolver.company.schemas import CompanyVersion, Filing
 from market_evolver.company.seed import seed_companies
 from market_evolver.config import AppConfig, load_config
 from market_evolver.errors import GovernanceViolation
+from market_evolver.experiment.baselines import walk_forward_windows
+from market_evolver.experiment.engine import BacktestEngine
+from market_evolver.experiment.repository import SqlExperimentRepository
+from market_evolver.experiment.schemas import (
+    CostModel,
+    EntryRule,
+    EvaluationWindow,
+    ExitRule,
+    ExperimentSpecification,
+    ExperimentStatus,
+    PartitionKind,
+    PositionPolicy,
+    RebalanceFrequency,
+    RuleOperator,
+    SignalClause,
+    SignalDefinition,
+    SignalKind,
+    SignalObservation,
+    TestSetAccess,
+)
 from market_evolver.fusion.benchmark import run_false_rumor_benchmark
 from market_evolver.fusion.engine import calculate_reputation, current_corroboration_state
 from market_evolver.fusion.repository import SqlFusionRepository
@@ -297,6 +319,45 @@ def build_parser() -> argparse.ArgumentParser:
     reputation_source.add_argument("source_id")
     reputation_source.add_argument("--domain", required=True)
     reputation_source.add_argument("--at", required=True)
+    experiment = commands.add_parser("experiment")
+    experiment_commands = experiment.add_subparsers(dest="experiment_command", required=True)
+    experiment_create = experiment_commands.add_parser("create")
+    for name in (
+        "hypothesis",
+        "context",
+        "assets",
+        "benchmark",
+        "cutoff",
+        "research-start",
+        "research-end",
+        "validation-start",
+        "validation-end",
+        "test-start",
+        "test-end",
+        "signal-kind",
+        "signal-field",
+        "signal-operator",
+        "signal-value",
+    ):
+        experiment_create.add_argument(f"--{name}", required=True)
+    experiment_validate = experiment_commands.add_parser("validate")
+    experiment_validate.add_argument("experiment_id")
+    backtest = commands.add_parser("backtest")
+    backtest_commands = backtest.add_subparsers(dest="backtest_command", required=True)
+    backtest_run = backtest_commands.add_parser("run")
+    backtest_run.add_argument("experiment_id")
+    backtest_run.add_argument("--signal-at", action="append", default=[])
+    backtest_run.add_argument("--signal-provenance", action="append", default=[])
+    backtest_run.add_argument("--at", required=True)
+    backtest_show = backtest_commands.add_parser("show")
+    backtest_show.add_argument("run_id")
+    backtest_compare = backtest_commands.add_parser("compare")
+    backtest_compare.add_argument("run_a")
+    backtest_compare.add_argument("run_b")
+    walkforward = commands.add_parser("walkforward")
+    walkforward_commands = walkforward.add_subparsers(dest="walkforward_command", required=True)
+    walkforward_run = walkforward_commands.add_parser("run")
+    walkforward_run.add_argument("experiment_id")
     return parser
 
 
@@ -400,6 +461,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _fusion_command(args, session)
         if args.command == "reputation":
             return _reputation_command(args, session)
+        if args.command == "experiment":
+            return _experiment_command(args, session)
+        if args.command == "backtest":
+            return _backtest_command(args, config, session)
+        if args.command == "walkforward":
+            return _walkforward_command(args, session)
         telemetry = measure_storage(session)
         print(
             json.dumps(
@@ -518,6 +585,20 @@ def main(argv: Sequence[str] | None = None) -> int:
                         telemetry.average_confirmation_lag_seconds
                     ),
                     "source_domain_resolution_counts": (telemetry.source_domain_resolution_counts),
+                    "experiments_by_day": [
+                        {"day": item.day.isoformat(), "items": item.value}
+                        for item in telemetry.experiments_by_day
+                    ],
+                    "backtests_by_day": [
+                        {"day": item.day.isoformat(), "items": item.value}
+                        for item in telemetry.backtests_by_day
+                    ],
+                    "trades_simulated": telemetry.trades_simulated,
+                    "backtest_runtime_ms": telemetry.backtest_runtime_ms,
+                    "backtest_parquet_bytes_read": telemetry.backtest_parquet_bytes_read,
+                    "rejected_experiments": telemetry.rejected_experiments,
+                    "leakage_failures": telemetry.leakage_failures,
+                    "test_set_accesses": telemetry.test_set_accesses,
                 },
                 indent=2,
             )
@@ -1535,6 +1616,152 @@ def _social_command(args: argparse.Namespace, session: Session) -> int:
             indent=2,
         )
     )
+    return 0
+
+
+def _experiment_command(args: argparse.Namespace, session: Session) -> int:
+    repo = SqlExperimentRepository(session)
+    if args.experiment_command == "create":
+        spec = ExperimentSpecification(
+            args.hypothesis,
+            datetime.now(UTC),
+            _parse_timestamp(args.cutoff),
+            args.context,
+            tuple(part.strip() for part in args.assets.split(",") if part.strip()),
+            args.benchmark,
+            SignalDefinition(
+                (
+                    SignalClause(
+                        SignalKind(args.signal_kind),
+                        args.signal_field,
+                        RuleOperator(args.signal_operator),
+                        args.signal_value,
+                    ),
+                )
+            ),
+            EntryRule.NEXT_OPEN,
+            ExitRule.FIXED_HOLDING_PERIOD,
+            5,
+            RebalanceFrequency.EVENT_DRIVEN,
+            PositionPolicy.SINGLE_POSITION,
+            CostModel(),
+            EvaluationWindow(
+                *(
+                    _parse_timestamp(getattr(args, name))
+                    for name in (
+                        "research_start",
+                        "research_end",
+                        "validation_start",
+                        "validation_end",
+                        "test_start",
+                        "test_end",
+                    )
+                )
+            ),
+            ("survivorship_reviewed", "corporate_actions_verified"),
+            (("holding_period", "5"),),
+            "sha256:" + hashlib.sha256(b"marketevolver-v0.16").hexdigest(),
+            (args.hypothesis, args.context),
+        )
+    else:
+        prior = repo.specification(args.experiment_id)
+        if prior is None:
+            raise GovernanceViolation("experiment does not exist")
+        spec = replace(
+            prior,
+            created_at=datetime.now(UTC),
+            status=ExperimentStatus.VALIDATED,
+            version=prior.version + 1,
+            revision_of=prior.experiment_id,
+        )
+    repo.add_specification(spec)
+    session.commit()
+    print(spec.experiment_id)
+    return 0
+
+
+def _backtest_command(args: argparse.Namespace, config: AppConfig, session: Session) -> int:
+    repo = SqlExperimentRepository(session)
+    if args.backtest_command == "show":
+        result = repo.result(args.run_id)
+        if result is None:
+            raise GovernanceViolation("backtest result does not exist")
+        print(json.dumps(asdict(result), default=str, indent=2))
+        return 0
+    if args.backtest_command == "compare":
+        left, right = repo.result(args.run_a), repo.result(args.run_b)
+        if left is None or right is None:
+            raise GovernanceViolation("backtest comparison references missing result")
+        print(
+            json.dumps(
+                {
+                    "run_a": left.result_id,
+                    "run_b": right.result_id,
+                    "net_return_difference": str(
+                        Decimal(left.net_return) - Decimal(right.net_return)
+                    ),
+                    "cost_difference": str(
+                        left.transaction_costs.total - right.transaction_costs.total
+                    ),
+                },
+                indent=2,
+            )
+        )
+        return 0
+    spec = repo.specification(args.experiment_id)
+    if spec is None:
+        raise GovernanceViolation("experiment does not exist")
+    signals: list[SignalObservation] = []
+    for item in args.signal_at:
+        asset_id, separator, timestamp = item.partition("=")
+        if not separator or asset_id not in spec.asset_universe:
+            raise GovernanceViolation("signal-at must be allowlisted asset=timestamp")
+        signals.append(
+            SignalObservation(
+                asset_id,
+                _parse_timestamp(timestamp),
+                tuple(
+                    (clause.field_name, clause.value) for clause in spec.signal_definition.clauses
+                ),
+                tuple(args.signal_provenance) or ("cli-explicit-signal",),
+            )
+        )
+    cutoff = _parse_timestamp(args.at)
+    access = TestSetAccess(
+        spec.experiment_id,
+        PartitionKind.TEST,
+        datetime.now(UTC),
+        "historical backtest",
+        "market-evolver-cli",
+    )
+    repo.add_test_access(access)
+    session.commit()  # audit boundary precedes every test-set market read
+    manifest, result = BacktestEngine(
+        session, MarketDataStore(session, config.market_storage.resolve_root())
+    ).run(spec, tuple(signals), cutoff=cutoff)
+    repo.add_dataset(manifest)
+    repo.add_result(result)
+    session.commit()
+    print(result.result_id)
+    return 0
+
+
+def _walkforward_command(args: argparse.Namespace, session: Session) -> int:
+    spec = SqlExperimentRepository(session).specification(args.experiment_id)
+    if spec is None:
+        raise GovernanceViolation("experiment does not exist")
+    points = tuple(
+        value.isoformat()
+        for value in (
+            spec.evaluation_window.research_start,
+            spec.evaluation_window.research_end,
+            spec.evaluation_window.validation_start,
+            spec.evaluation_window.validation_end,
+            spec.evaluation_window.test_start,
+            spec.evaluation_window.test_end,
+        )
+    )
+    print(json.dumps([asdict(item) for item in walk_forward_windows(points, 2, 2, 2)]))
     return 0
 
 

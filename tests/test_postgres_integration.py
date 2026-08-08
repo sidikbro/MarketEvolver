@@ -27,6 +27,28 @@ from market_evolver.company.schemas import (
 )
 from market_evolver.company.seed import seed_companies
 from market_evolver.config import TelegramSourceConfig
+from market_evolver.experiment.repository import SqlExperimentRepository
+from market_evolver.experiment.schemas import (
+    BacktestResult,
+    CostBreakdown,
+    CostModel,
+    DatasetManifest,
+    EntryRule,
+    EvaluationWindow,
+    ExitRule,
+    ExperimentSpecification,
+    ExperimentStatus,
+    PartitionKind,
+    PositionPolicy,
+    RebalanceFrequency,
+    RuleOperator,
+    SignalClause,
+    SignalDefinition,
+    SignalKind,
+)
+from market_evolver.experiment.schemas import (
+    TestSetAccess as AccessAudit,
+)
 from market_evolver.fusion.engine import calculate_reputation
 from market_evolver.fusion.repository import SqlFusionRepository
 from market_evolver.fusion.schemas import (
@@ -126,9 +148,9 @@ def migrated_engine(postgres_url: str):
         os.environ["MARKET_EVOLVER_DATABASE_URL"] = previous
 
 
-def test_migrations_reach_0014(migrated_engine) -> None:
+def test_migrations_reach_0015(migrated_engine) -> None:
     with migrated_engine.connect() as connection:
-        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0014"
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0015"
 
 
 def test_telegram_revision_cutoff_and_append_only(migrated_engine, tmp_path: Path) -> None:
@@ -288,6 +310,106 @@ def test_fusion_lineage_resolution_reputation_and_append_only(migrated_engine) -
             session.execute(
                 text("UPDATE unified_claims SET confidence = 1 WHERE claim_id = :id"),
                 {"id": original.claim_id},
+            )
+            session.flush()
+        session.rollback()
+
+
+def test_experiment_audit_result_replay_and_append_only(migrated_engine) -> None:
+    token = uuid4().hex
+    t0 = datetime.now(UTC) - timedelta(days=6)
+    points = tuple(t0 + timedelta(days=index) for index in range(6))
+    spec = ExperimentSpecification(
+        f"hypothesis:{token}",
+        points[1],
+        points[1],
+        f"context:{token}",
+        (f"asset:{token}",),
+        f"benchmark:{token}",
+        SignalDefinition(
+            (
+                SignalClause(
+                    SignalKind.EVENT_TYPE,
+                    "event_type",
+                    RuleOperator.EQ,
+                    "policy_event",
+                ),
+            )
+        ),
+        EntryRule.NEXT_OPEN,
+        ExitRule.FIXED_HOLDING_PERIOD,
+        1,
+        RebalanceFrequency.EVENT_DRIVEN,
+        PositionPolicy.SINGLE_POSITION,
+        CostModel(),
+        EvaluationWindow(*points),
+        ("survivorship_reviewed", "corporate_actions_verified"),
+        (("holding_period", "1"),),
+        "sha256:" + "d" * 64,
+        (f"fixture:{token}",),
+        ExperimentStatus.VALIDATED,
+    )
+    manifest = DatasetManifest(
+        "integration/1",
+        ("e" * 64,),
+        ("market/1",),
+        "sha256:" + "f" * 64,
+        0,
+        1,
+        100,
+    )
+    zero_costs = CostBreakdown("0", "0", "0", "0", "0")
+    result = BacktestResult(
+        spec.experiment_id,
+        manifest.manifest_id,
+        (
+            ("experiment_spec_hash", spec.experiment_id),
+            ("code_version_hash", spec.code_version_hash),
+            ("parameter_hash", manifest.parameter_hash),
+            ("seed", "0"),
+            ("parquet_hashes", "e" * 64),
+            ("source_versions", "market/1"),
+        ),
+        points[5],
+        points[5],
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        zero_costs,
+        0,
+        0,
+        0,
+        (),
+        (),
+        (),
+        1,
+        100,
+    )
+    with Session(migrated_engine) as session:
+        repo = SqlExperimentRepository(session)
+        repo.add_specification(spec)
+        repo.add_test_access(
+            AccessAudit(spec.experiment_id, PartitionKind.TEST, points[5], "integration", "pytest")
+        )
+        repo.add_dataset(manifest)
+        repo.add_result(result)
+        session.commit()
+        assert repo.result(result.result_id) == result
+        assert len(repo.test_accesses(spec.experiment_id)) == 1
+        with pytest.raises(DBAPIError):
+            session.execute(
+                text(
+                    "UPDATE experiment_specifications SET holding_period = 2 "
+                    "WHERE experiment_id = :id"
+                ),
+                {"id": spec.experiment_id},
             )
             session.flush()
         session.rollback()

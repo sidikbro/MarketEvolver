@@ -1385,6 +1385,100 @@ class FusionReputationModel(Base):
     uncertainty: Mapped[str] = mapped_column(String(128), nullable=False)
 
 
+class ExperimentSpecificationModel(Base):
+    __tablename__ = "experiment_specifications"
+    experiment_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    hypothesis_id: Mapped[str] = mapped_column(String(96), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    cutoff: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    research_context_id: Mapped[str] = mapped_column(String(96), nullable=False)
+    asset_universe: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    benchmark: Mapped[str] = mapped_column(String(96), nullable=False)
+    signal_definition: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    entry_rule: Mapped[str] = mapped_column(String(24), nullable=False)
+    exit_rule: Mapped[str] = mapped_column(String(32), nullable=False)
+    holding_period: Mapped[int] = mapped_column(Integer, nullable=False)
+    rebalance_frequency: Mapped[str] = mapped_column(String(24), nullable=False)
+    position_policy: Mapped[str] = mapped_column(String(24), nullable=False)
+    cost_model: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    evaluation_window: Mapped[dict[str, str]] = mapped_column(JSON, nullable=False)
+    exclusion_rules: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    parameter_manifest: Mapped[list[list[str]]] = mapped_column(JSON, nullable=False)
+    code_version_hash: Mapped[str] = mapped_column(String(80), nullable=False)
+    provenance: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    revision_of: Mapped[str | None] = mapped_column(
+        ForeignKey("experiment_specifications.experiment_id")
+    )
+
+
+class BacktestDatasetModel(Base):
+    __tablename__ = "backtest_datasets"
+    manifest_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    dataset_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    parquet_hashes: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    source_versions: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    parameter_hash: Mapped[str] = mapped_column(String(80), nullable=False)
+    seed: Mapped[int] = mapped_column(Integer, nullable=False)
+    rows_read: Mapped[int] = mapped_column(Integer, nullable=False)
+    bytes_read: Mapped[int] = mapped_column(BigInteger, nullable=False)
+
+
+class BacktestResultModel(Base):
+    __tablename__ = "backtest_results"
+    result_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    experiment_id: Mapped[str] = mapped_column(
+        ForeignKey("experiment_specifications.experiment_id"), nullable=False, index=True
+    )
+    dataset_manifest_id: Mapped[str] = mapped_column(
+        ForeignKey("backtest_datasets.manifest_id"), nullable=False
+    )
+    reproducibility: Mapped[list[list[str]]] = mapped_column(JSON, nullable=False)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    finished_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    metrics: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    transaction_costs: Mapped[dict[str, str]] = mapped_column(JSON, nullable=False)
+    number_of_signals: Mapped[int] = mapped_column(Integer, nullable=False)
+    executed_trades: Mapped[int] = mapped_column(Integer, nullable=False)
+    skipped_signals: Mapped[int] = mapped_column(Integer, nullable=False)
+    rejection_reasons: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    nav: Mapped[list[list[str]]] = mapped_column(JSON, nullable=False)
+    position_paths: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False)
+    runtime_ms: Mapped[int] = mapped_column(Integer, nullable=False)
+    parquet_bytes_read: Mapped[int] = mapped_column(BigInteger, nullable=False)
+
+
+class TestSetAccessModel(Base):
+    __tablename__ = "test_set_accesses"
+    audit_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    experiment_id: Mapped[str] = mapped_column(
+        ForeignKey("experiment_specifications.experiment_id"), nullable=False, index=True
+    )
+    partition: Mapped[str] = mapped_column(String(16), nullable=False)
+    accessed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    purpose: Mapped[str] = mapped_column(String(256), nullable=False)
+    actor: Mapped[str] = mapped_column(String(128), nullable=False)
+
+
+class ExperimentRegistryModel(Base):
+    __tablename__ = "experiment_registry_snapshots"
+    snapshot_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    hypotheses_generated: Mapped[int] = mapped_column(Integer, nullable=False)
+    experiments_executed: Mapped[int] = mapped_column(Integer, nullable=False)
+    rejected_experiments: Mapped[int] = mapped_column(Integer, nullable=False)
+    reported_experiments: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
 def _forbid_mutation(_mapper: Any, _connection: Any, target: Any) -> None:
     raise ImmutableRecordError(
         f"{type(target).__name__} {getattr(target, 'provenance_id', '')} is immutable"
@@ -1459,6 +1553,11 @@ for _model in (
     ClaimContradictionModel,
     FusionScoreModel,
     FusionReputationModel,
+    ExperimentSpecificationModel,
+    BacktestDatasetModel,
+    BacktestResultModel,
+    TestSetAccessModel,
+    ExperimentRegistryModel,
     SourceModel,
     EvidenceModel,
     EventModel,
