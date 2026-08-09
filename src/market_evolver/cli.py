@@ -122,6 +122,8 @@ from market_evolver.storage.models import (
 from market_evolver.storage.telemetry import measure_storage
 from market_evolver.telegram.client import TelethonClientAdapter
 from market_evolver.telegram.runner import TelegramRunner
+from market_evolver.topology.repository import SqlTopologyRepository
+from market_evolver.topology.schemas import TopologyAction, TopologyRegistryEvent
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -433,6 +435,23 @@ def build_parser() -> argparse.ArgumentParser:
     for operation in ("promote", "reject"):
         item = evolve_commands.add_parser(operation)
         item.add_argument("challenger_id")
+    topology = commands.add_parser("topology")
+    topology_commands = topology.add_subparsers(dest="topology_command", required=True)
+    topology_commands.add_parser("show")
+    topology_commands.add_parser("history")
+    topology_commands.add_parser("gaps")
+    topology_commands.add_parser("benchmark")
+    topology_split = topology_commands.add_parser("propose-split")
+    topology_split.add_argument("expert_id")
+    topology_merge = topology_commands.add_parser("propose-merge")
+    topology_merge.add_argument("expert_a")
+    topology_merge.add_argument("expert_b")
+    topology_expert = topology_commands.add_parser("propose-expert")
+    topology_expert.add_argument("expert_id")
+    for operation in ("evaluate", "certify", "activate"):
+        item = topology_commands.add_parser(operation)
+        item.add_argument("proposal_id")
+    topology_commands.add_parser("rollback")
     return parser
 
 
@@ -548,6 +567,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _expert_command(args, session)
         if args.command == "evolve":
             return _evolve_command(args, session)
+        if args.command == "topology":
+            return _topology_command(args, session)
         telemetry = measure_storage(session)
         print(
             json.dumps(
@@ -2141,6 +2162,111 @@ def _evolve_command(args: argparse.Namespace, session: Session) -> int:
         datetime.now(UTC),
         (),
         None,
+    )
+    repo.add_registry_event(event)
+    session.commit()
+    print(event.event_id)
+    return 0
+
+
+def _topology_command(args: argparse.Namespace, session: Session) -> int:
+    from market_evolver.storage.models import (
+        TopologyEvaluationModel,
+        TopologyGapSignalModel,
+        TopologyProposalModel,
+        TopologyRegistryEventModel,
+    )
+
+    repo = SqlTopologyRepository(session)
+    now = datetime.now(UTC)
+    if args.topology_command == "show":
+        current = repo.active_at(now)
+        print(json.dumps(None if current is None else asdict(current), default=str, indent=2))
+        return 0
+    if args.topology_command == "history":
+        print(json.dumps(repo.history(), default=str, indent=2))
+        return 0
+    if args.topology_command == "gaps":
+        rows = tuple(
+            session.scalars(
+                select(TopologyGapSignalModel).order_by(TopologyGapSignalModel.observed_at.desc())
+            )
+        )
+        print(json.dumps([row.payload for row in rows], indent=2))
+        return 0
+    if args.topology_command == "benchmark":
+        rows = tuple(
+            session.scalars(
+                select(TopologyEvaluationModel).order_by(
+                    TopologyEvaluationModel.evaluated_at.desc()
+                )
+            )
+        )
+        print(json.dumps([row.payload for row in rows], indent=2))
+        return 0
+    if args.topology_command.startswith("propose-"):
+        raise GovernanceViolation(
+            "topology proposal requires persisted gap evidence and reviewed expert definitions"
+        )
+    proposal = (
+        session.get(TopologyProposalModel, args.proposal_id)
+        if hasattr(args, "proposal_id")
+        else None
+    )
+    if args.topology_command in {"evaluate", "certify", "activate"} and proposal is None:
+        raise GovernanceViolation("topology proposal does not exist")
+    evaluations = (
+        tuple(
+            session.scalars(
+                select(TopologyEvaluationModel)
+                .where(TopologyEvaluationModel.proposal_id == args.proposal_id)
+                .order_by(TopologyEvaluationModel.evaluated_at.desc())
+            )
+        )
+        if proposal is not None
+        else ()
+    )
+    if args.topology_command in {"evaluate", "certify"}:
+        print(json.dumps([row.payload for row in evaluations], indent=2))
+        return 0
+    if args.topology_command == "activate":
+        if (
+            not evaluations
+            or evaluations[0].decision != "certified_pending_approval"
+            or evaluations[0].safety_veto
+        ):
+            raise GovernanceViolation("topology lacks passing certification and safety gate")
+        current = repo.active_at(now)
+        if current is None:
+            raise GovernanceViolation("no active champion topology")
+        event = TopologyRegistryEvent(
+            evaluations[0].challenger_topology_id,
+            current.topology_version_id,
+            TopologyAction.ACTIVATION,
+            "governance:cli-operator",
+            "explicit certified topology activation",
+            now,
+        )
+        repo.add_registry_event(event)
+        session.commit()
+        print(event.event_id)
+        return 0
+    history = tuple(
+        session.scalars(
+            select(TopologyRegistryEventModel).order_by(TopologyRegistryEventModel.occurred_at)
+        )
+    )
+    if len(history) < 2:
+        raise GovernanceViolation("no prior topology is available for rollback")
+    current_id = history[-1].topology_version_id
+    prior_id = str(history[-1].payload["previous_topology_version_id"])
+    event = TopologyRegistryEvent(
+        prior_id,
+        current_id,
+        TopologyAction.ROLLBACK,
+        "governance:cli-operator",
+        "explicit topology rollback",
+        now,
     )
     repo.add_registry_event(event)
     session.commit()

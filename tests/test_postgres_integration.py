@@ -129,6 +129,8 @@ from market_evolver.storage.models import ArtifactModel, EvidenceModel, Telegram
 from market_evolver.storage.repositories import SqlEvidenceRepository, SqlSourceRepository
 from market_evolver.telegram.runner import TelegramRunner
 from market_evolver.telegram.schemas import TelegramMessage
+from market_evolver.topology.repository import SqlTopologyRepository
+from market_evolver.topology.schemas import TopologyNode, TopologyState, TopologyVersion
 
 pytestmark = pytest.mark.postgres
 
@@ -157,9 +159,9 @@ def migrated_engine(postgres_url: str):
         os.environ["MARKET_EVOLVER_DATABASE_URL"] = previous
 
 
-def test_migrations_reach_0018(migrated_engine) -> None:
+def test_migrations_reach_0019(migrated_engine) -> None:
     with migrated_engine.connect() as connection:
-        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0018"
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0019"
 
 
 def test_telegram_revision_cutoff_and_append_only(migrated_engine, tmp_path: Path) -> None:
@@ -1100,4 +1102,32 @@ def test_evolvable_expert_version_database_append_only(migrated_engine) -> None:
         connection.execute(
             text("DELETE FROM evolvable_expert_versions WHERE expert_version_id=:id"),
             {"id": version_id},
+        )
+
+
+def test_topology_version_database_append_only(migrated_engine) -> None:
+    now = datetime.now(UTC)
+    item = TopologyVersion(
+        None,
+        None,
+        (TopologyNode("expert.general", "expert-version:general", "general", now),),
+        (),
+        (),
+        "router:integration",
+        now,
+        "governance:integration",
+        TopologyState.ACTIVE,
+        None,
+        "passed",
+        ("integration",),
+    )
+    with Session(migrated_engine) as session:
+        repo = SqlTopologyRepository(session)
+        repo.add_version(item)
+        session.commit()
+        topology_id = item.topology_version_id
+    with pytest.raises(DBAPIError), migrated_engine.begin() as connection:
+        connection.execute(
+            text("DELETE FROM expert_topology_versions WHERE topology_version_id=:id"),
+            {"id": topology_id},
         )

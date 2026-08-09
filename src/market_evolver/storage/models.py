@@ -1727,6 +1727,84 @@ class ChampionRegistryEventModel(Base):
     payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
 
 
+class TopologyProposalModel(Base):
+    __tablename__ = "topology_proposals"
+    proposal_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    proposal_type: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(24), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+class TopologyGapSignalModel(Base):
+    __tablename__ = "topology_gap_signals"
+    signal_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    expert_id: Mapped[str] = mapped_column(String(96), nullable=False, index=True)
+    category: Mapped[str] = mapped_column(String(48), nullable=False, index=True)
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+class ExpertTopologyVersionModel(Base):
+    __tablename__ = "expert_topology_versions"
+    topology_version_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    parent_topology_version_id: Mapped[str | None] = mapped_column(String(96), index=True)
+    proposal_id: Mapped[str | None] = mapped_column(ForeignKey("topology_proposals.proposal_id"))
+    state: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+class TopologyEvaluationModel(Base):
+    __tablename__ = "topology_evaluations"
+    evaluation_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    proposal_id: Mapped[str] = mapped_column(
+        ForeignKey("topology_proposals.proposal_id"), nullable=False
+    )
+    challenger_topology_id: Mapped[str] = mapped_column(
+        ForeignKey("expert_topology_versions.topology_version_id"), nullable=False
+    )
+    decision: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
+    safety_veto: Mapped[bool] = mapped_column(nullable=False)
+    evaluated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+class TopologyRegistryEventModel(Base):
+    __tablename__ = "topology_registry_events"
+    event_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    topology_version_id: Mapped[str] = mapped_column(
+        ForeignKey("expert_topology_versions.topology_version_id"), nullable=False
+    )
+    action: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+class TopologyRoutingTraceModel(Base):
+    __tablename__ = "topology_routing_traces"
+    trace_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    topology_version_id: Mapped[str] = mapped_column(
+        ForeignKey("expert_topology_versions.topology_version_id"), nullable=False
+    )
+    cutoff: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    correct: Mapped[bool] = mapped_column(nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+class TopologyHoldoutAccessModel(Base):
+    __tablename__ = "topology_holdout_accesses"
+    access_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    topology_version_id: Mapped[str] = mapped_column(
+        ForeignKey("expert_topology_versions.topology_version_id"), nullable=False
+    )
+    benchmark_manifest_id: Mapped[str] = mapped_column(String(96), nullable=False)
+    accessed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
 def _forbid_mutation(_mapper: Any, _connection: Any, target: Any) -> None:
     raise ImmutableRecordError(
         f"{type(target).__name__} {getattr(target, 'provenance_id', '')} is immutable"
@@ -1829,6 +1907,13 @@ for _model in (
     EvolutionHoldoutAccessModel,
     ChallengerEvaluationModel,
     ChampionRegistryEventModel,
+    TopologyProposalModel,
+    TopologyGapSignalModel,
+    ExpertTopologyVersionModel,
+    TopologyEvaluationModel,
+    TopologyRegistryEventModel,
+    TopologyRoutingTraceModel,
+    TopologyHoldoutAccessModel,
     SourceModel,
     EvidenceModel,
     EventModel,

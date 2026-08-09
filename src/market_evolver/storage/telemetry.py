@@ -45,6 +45,7 @@ from market_evolver.storage.models import (
     ExpertScorecardModel,
     ExpertSessionModel,
     ExpertToolAuditModel,
+    ExpertTopologyVersionModel,
     FilingModel,
     FundamentalModel,
     FusionReputationModel,
@@ -106,6 +107,11 @@ from market_evolver.storage.models import (
     TelegramReceiptModel,
     TelegramRunModel,
     TestSetAccessModel,
+    TopologyEvaluationModel,
+    TopologyGapSignalModel,
+    TopologyProposalModel,
+    TopologyRegistryEventModel,
+    TopologyRoutingTraceModel,
     TrendDivergenceModel,
     TrendSignalModel,
     UnifiedClaimModel,
@@ -214,6 +220,12 @@ class StorageTelemetry:
     evolution_rollbacks: int = 0
     evolution_holdout_accesses: int = 0
     evolution_safety_regressions: int = 0
+    topology_proposals: int = 0
+    topology_create_split_merge: dict[str, int] | None = None
+    topology_certification_failures: int = 0
+    topology_routing_errors: int = 0
+    topology_active_experts: int = 0
+    topology_rollbacks: int = 0
 
 
 def measure_storage(session: Session) -> StorageTelemetry:
@@ -319,6 +331,12 @@ def measure_storage(session: Session) -> StorageTelemetry:
             EvolutionHoldoutAccessModel,
             ChallengerEvaluationModel,
             ChampionRegistryEventModel,
+            TopologyProposalModel,
+            TopologyGapSignalModel,
+            ExpertTopologyVersionModel,
+            TopologyEvaluationModel,
+            TopologyRegistryEventModel,
+            TopologyRoutingTraceModel,
         )
     }
     raw_bytes = int(
@@ -715,6 +733,43 @@ def measure_storage(session: Session) -> StorageTelemetry:
             )
             or 0
         ),
+        topology_proposals=_count(session, TopologyProposalModel),
+        topology_create_split_merge={
+            kind: int(
+                session.scalar(
+                    select(func.count())
+                    .select_from(TopologyProposalModel)
+                    .where(TopologyProposalModel.proposal_type == kind)
+                )
+                or 0
+            )
+            for kind in ("create_expert", "split_expert", "merge_experts")
+        },
+        topology_certification_failures=int(
+            session.scalar(
+                select(func.count())
+                .select_from(TopologyEvaluationModel)
+                .where(TopologyEvaluationModel.decision != "certified_pending_approval")
+            )
+            or 0
+        ),
+        topology_routing_errors=int(
+            session.scalar(
+                select(func.count())
+                .select_from(TopologyRoutingTraceModel)
+                .where(TopologyRoutingTraceModel.correct.is_(False))
+            )
+            or 0
+        ),
+        topology_active_experts=_latest_topology_expert_count(session),
+        topology_rollbacks=int(
+            session.scalar(
+                select(func.count())
+                .select_from(TopologyRegistryEventModel)
+                .where(TopologyRegistryEventModel.action == "rollback")
+            )
+            or 0
+        ),
     )
 
 
@@ -724,3 +779,15 @@ def _count(session: Session, model: type) -> int:
 
 def _measurements(values: dict[date, int]) -> tuple[DailyMeasurement, ...]:
     return tuple(DailyMeasurement(day, values[day]) for day in sorted(values))
+
+
+def _latest_topology_expert_count(session: Session) -> int:
+    event = session.scalar(
+        select(TopologyRegistryEventModel)
+        .order_by(TopologyRegistryEventModel.occurred_at.desc())
+        .limit(1)
+    )
+    if event is None:
+        return 0
+    version = session.get(ExpertTopologyVersionModel, event.topology_version_id)
+    return 0 if version is None else len(version.payload.get("nodes", ()))
