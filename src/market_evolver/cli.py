@@ -20,6 +20,14 @@ from market_evolver.company.schemas import CompanyVersion, Filing
 from market_evolver.company.seed import seed_companies
 from market_evolver.config import AppConfig, load_config
 from market_evolver.errors import GovernanceViolation
+from market_evolver.evolve.repository import SqlEvolutionRepository
+from market_evolver.evolve.schemas import (
+    ChampionRegistryEvent,
+    ImprovementProposal,
+    ProposalStatus,
+    ProposalType,
+    RegistryAction,
+)
 from market_evolver.experiment.baselines import walk_forward_windows
 from market_evolver.experiment.engine import BacktestEngine
 from market_evolver.experiment.repository import SqlExperimentRepository
@@ -412,6 +420,19 @@ def build_parser() -> argparse.ArgumentParser:
     for operation in ("approve", "suspend"):
         item = expert_commands.add_parser(operation)
         item.add_argument("expert_id")
+    evolve = commands.add_parser("evolve")
+    evolve_commands = evolve.add_subparsers(dest="evolve_command", required=True)
+    for operation in ("failures", "propose", "challengers", "history", "rollback"):
+        item = evolve_commands.add_parser(operation)
+        item.add_argument("expert_id")
+    evolve_evaluate = evolve_commands.add_parser("evaluate")
+    evolve_evaluate.add_argument("challenger_id")
+    evolve_compare = evolve_commands.add_parser("compare")
+    evolve_compare.add_argument("champion_id")
+    evolve_compare.add_argument("challenger_id")
+    for operation in ("promote", "reject"):
+        item = evolve_commands.add_parser(operation)
+        item.add_argument("challenger_id")
     return parser
 
 
@@ -525,6 +546,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _paper_command(args, session)
         if args.command == "expert":
             return _expert_command(args, session)
+        if args.command == "evolve":
+            return _evolve_command(args, session)
         telemetry = measure_storage(session)
         print(
             json.dumps(
@@ -1995,6 +2018,133 @@ def _expert_command(args: argparse.Namespace, session: Session) -> int:
     repo.add_routing(decision)
     session.commit()
     print(json.dumps(asdict(decision), default=str))
+    return 0
+
+
+def _evolve_command(args: argparse.Namespace, session: Session) -> int:
+    from market_evolver.storage.models import (
+        ChallengerEvaluationModel,
+        EvolutionErrorAttributionModel,
+        EvolvableExpertVersionModel,
+    )
+
+    repo = SqlEvolutionRepository(session)
+    if args.evolve_command == "history":
+        print(json.dumps(repo.history(args.expert_id), default=str, indent=2))
+        return 0
+    if args.evolve_command == "failures":
+        version_ids = select(EvolvableExpertVersionModel.expert_version_id).where(
+            EvolvableExpertVersionModel.expert_id == args.expert_id
+        )
+        rows = tuple(
+            session.scalars(
+                select(EvolutionErrorAttributionModel).where(
+                    EvolutionErrorAttributionModel.expert_version_id.in_(version_ids)
+                )
+            )
+        )
+        print(json.dumps([row.payload for row in rows], indent=2))
+        return 0
+    if args.evolve_command == "challengers":
+        rows = tuple(
+            session.scalars(
+                select(EvolvableExpertVersionModel).where(
+                    EvolvableExpertVersionModel.expert_id == args.expert_id,
+                    EvolvableExpertVersionModel.parent_version.is_not(None),
+                )
+            )
+        )
+        print(json.dumps([row.payload for row in rows], indent=2))
+        return 0
+    if args.evolve_command == "propose":
+        champion_id = repo.current_champion_id(args.expert_id)
+        if champion_id is None:
+            raise GovernanceViolation("expert has no champion version")
+        item = ImprovementProposal(
+            args.expert_id,
+            champion_id,
+            ProposalType.REASONING_CHECKLIST,
+            (("reasoning_template", "check evidence|check mechanisms|check contradictions"),),
+            "Operator-authored bounded checklist proposal.",
+            ("operator-observed-failure",),
+            "operator:cli",
+            ("audit:cli-explicit",),
+            datetime.now(UTC),
+            ProposalStatus.PROPOSED,
+            ("operator:cli",),
+        )
+        repo.add_proposal(item)
+        session.commit()
+        print(item.proposal_id)
+        return 0
+    challenger_id = args.challenger_id
+    challenger = session.get(EvolvableExpertVersionModel, challenger_id)
+    if challenger is None:
+        raise GovernanceViolation("challenger version does not exist")
+    evaluations = tuple(
+        session.scalars(
+            select(ChallengerEvaluationModel)
+            .where(ChallengerEvaluationModel.challenger_version_id == challenger_id)
+            .order_by(ChallengerEvaluationModel.evaluated_at.desc())
+        )
+    )
+    if args.evolve_command in {"evaluate", "compare"}:
+        print(json.dumps([row.payload for row in evaluations], indent=2))
+        return 0
+    if args.evolve_command == "reject":
+        print(
+            json.dumps(
+                {
+                    "challenger_id": challenger_id,
+                    "status": "rejection requires a new append-only evaluated/rejected version",
+                }
+            )
+        )
+        return 0
+    if args.evolve_command == "promote":
+        if (
+            not evaluations
+            or evaluations[0].decision != "eligible_for_promotion"
+            or evaluations[0].safety_veto
+        ):
+            raise GovernanceViolation("challenger lacks a passing safety-gated evaluation")
+        previous = repo.current_champion_id(challenger.expert_id)
+        if previous is None:
+            raise GovernanceViolation("expert has no current champion")
+        event = ChampionRegistryEvent(
+            challenger.expert_id,
+            challenger_id,
+            previous,
+            RegistryAction.PROMOTION,
+            "governance:cli-operator",
+            "explicit CLI promotion",
+            datetime.now(UTC),
+            (),
+            evaluations[0].evaluation_id,
+        )
+        repo.add_registry_event(event)
+        session.commit()
+        print(event.event_id)
+        return 0
+    history = repo.history(args.expert_id)
+    if len(history) < 2:
+        raise GovernanceViolation("no prior champion is available for rollback")
+    current = str(history[-1]["champion_version_id"])
+    prior = str(history[-1]["previous_champion_version_id"])
+    event = ChampionRegistryEvent(
+        args.expert_id,
+        prior,
+        current,
+        RegistryAction.ROLLBACK,
+        "governance:cli-operator",
+        "explicit CLI rollback",
+        datetime.now(UTC),
+        (),
+        None,
+    )
+    repo.add_registry_event(event)
+    session.commit()
+    print(event.event_id)
     return 0
 
 

@@ -24,3 +24,6 @@ are excluded. Panels preserve each output and skeptical review; conflicts are no
 Experts have no execution authority. The only allowed path is `ExpertAssessment → reviewed
 ResearchHypothesis → validated ExperimentSpecification → validated signal → deterministic risk
 governor → paper runtime`.
+
+Expert evolution creates immutable versions from bounded proposals; it never mutates a definition in
+place or expands its host-granted capabilities. Champion changes require governance approval.

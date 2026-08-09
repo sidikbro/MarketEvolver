@@ -17,6 +17,8 @@ from market_evolver.storage.models import (
     BacktestResultModel,
     BenchmarkPairModel,
     CanonicalEventModel,
+    ChallengerEvaluationModel,
+    ChampionRegistryEventModel,
     ClaimContradictionModel,
     ClaimCorroborationModel,
     ClaimLineageModel,
@@ -32,6 +34,8 @@ from market_evolver.storage.models import (
     EventTransitionModel,
     EvidenceContradictionModel,
     EvidenceModel,
+    EvolutionHoldoutAccessModel,
+    EvolvableExpertVersionModel,
     ExperimentRegistryModel,
     ExperimentSpecificationModel,
     ExpertAssessmentModel,
@@ -54,6 +58,7 @@ from market_evolver.storage.models import (
     GovernmentCandidateModel,
     GovernmentTransitionModel,
     HypothesisModel,
+    ImprovementProposalModel,
     IngestionManifestModel,
     KnowledgeAliasModel,
     KnowledgeEntityModel,
@@ -201,6 +206,14 @@ class StorageTelemetry:
     expert_comparisons: int = 0
     expert_sessions_by_day: tuple[DailyMeasurement, ...] = ()
     expert_sessions_by_domain: dict[str, int] | None = None
+    evolution_proposals: int = 0
+    evolution_challengers: int = 0
+    evolution_evaluations: int = 0
+    evolution_promotions: int = 0
+    evolution_quarantines: int = 0
+    evolution_rollbacks: int = 0
+    evolution_holdout_accesses: int = 0
+    evolution_safety_regressions: int = 0
 
 
 def measure_storage(session: Session) -> StorageTelemetry:
@@ -301,6 +314,11 @@ def measure_storage(session: Session) -> StorageTelemetry:
             ExpertRoutingModel,
             ExpertScorecardModel,
             ExpertComparisonModel,
+            ImprovementProposalModel,
+            EvolvableExpertVersionModel,
+            EvolutionHoldoutAccessModel,
+            ChallengerEvaluationModel,
+            ChampionRegistryEventModel,
         )
     }
     raw_bytes = int(
@@ -654,6 +672,49 @@ def measure_storage(session: Session) -> StorageTelemetry:
         expert_comparisons=_count(session, ExpertComparisonModel),
         expert_sessions_by_day=_measurements(expert_days),
         expert_sessions_by_domain=dict(sorted(expert_domains.items())),
+        evolution_proposals=_count(session, ImprovementProposalModel),
+        evolution_challengers=int(
+            session.scalar(
+                select(func.count())
+                .select_from(EvolvableExpertVersionModel)
+                .where(EvolvableExpertVersionModel.parent_version.is_not(None))
+            )
+            or 0
+        ),
+        evolution_evaluations=_count(session, ChallengerEvaluationModel),
+        evolution_promotions=int(
+            session.scalar(
+                select(func.count())
+                .select_from(ChampionRegistryEventModel)
+                .where(ChampionRegistryEventModel.action == "promotion")
+            )
+            or 0
+        ),
+        evolution_quarantines=int(
+            session.scalar(
+                select(func.count())
+                .select_from(ChallengerEvaluationModel)
+                .where(ChallengerEvaluationModel.decision == "quarantined")
+            )
+            or 0
+        ),
+        evolution_rollbacks=int(
+            session.scalar(
+                select(func.count())
+                .select_from(ChampionRegistryEventModel)
+                .where(ChampionRegistryEventModel.action == "rollback")
+            )
+            or 0
+        ),
+        evolution_holdout_accesses=_count(session, EvolutionHoldoutAccessModel),
+        evolution_safety_regressions=int(
+            session.scalar(
+                select(func.count())
+                .select_from(ChallengerEvaluationModel)
+                .where(ChallengerEvaluationModel.safety_veto.is_(True))
+            )
+            or 0
+        ),
     )
 
 

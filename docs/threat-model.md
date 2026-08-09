@@ -253,3 +253,10 @@ classes, fabricated evidence, recommendation fields, and direct PaperOrder attem
 is data, not instructions. Fixed definitions prevent agent creation and topology mutation. Suspended
 experts leave future routing without rewriting history. Anonymized cases document—but do not
 eliminate—pretraining leakage risk.
+# v0.19 evolution threats
+
+Bounded proposal schemas reject risk/security weakening and capability expansion. Protected/final
+dataset access is audited, with final-holdout reuse rejected. Fabricated results cannot bypass the
+persisted benchmark manifest and safety veto. Models cannot self-promote. Prior champions cannot be
+deleted or overwritten, and rollback appends a new pointer event. Feedback and model suggestions are
+untrusted data, limiting improvement-prompt injection.

@@ -1643,6 +1643,90 @@ class ExpertComparisonModel(Base):
     payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
 
 
+class ImprovementProposalModel(Base):
+    __tablename__ = "improvement_proposals"
+    proposal_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    expert_id: Mapped[str] = mapped_column(String(96), nullable=False, index=True)
+    parent_expert_version: Mapped[str] = mapped_column(String(96), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(24), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+class EvolvableExpertVersionModel(Base):
+    __tablename__ = "evolvable_expert_versions"
+    expert_version_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    expert_id: Mapped[str] = mapped_column(String(96), nullable=False, index=True)
+    parent_version: Mapped[str | None] = mapped_column(String(96), index=True)
+    proposal_id: Mapped[str | None] = mapped_column(ForeignKey("improvement_proposals.proposal_id"))
+    approval_state: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+class EvolutionErrorAttributionModel(Base):
+    __tablename__ = "evolution_error_attributions"
+    attribution_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    expert_version_id: Mapped[str] = mapped_column(
+        ForeignKey("evolvable_expert_versions.expert_version_id"), nullable=False
+    )
+    category: Mapped[str] = mapped_column(String(48), nullable=False, index=True)
+    attributed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    critical: Mapped[bool] = mapped_column(nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+class EvolutionBenchmarkManifestModel(Base):
+    __tablename__ = "evolution_benchmark_manifests"
+    manifest_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    dataset_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+class EvolutionHoldoutAccessModel(Base):
+    __tablename__ = "evolution_holdout_accesses"
+    access_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    expert_version_id: Mapped[str] = mapped_column(
+        ForeignKey("evolvable_expert_versions.expert_version_id"), nullable=False
+    )
+    manifest_id: Mapped[str] = mapped_column(
+        ForeignKey("evolution_benchmark_manifests.manifest_id"), nullable=False
+    )
+    partition: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    accessed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+class ChallengerEvaluationModel(Base):
+    __tablename__ = "challenger_evaluations"
+    evaluation_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    challenger_version_id: Mapped[str] = mapped_column(
+        ForeignKey("evolvable_expert_versions.expert_version_id"), nullable=False, index=True
+    )
+    manifest_id: Mapped[str] = mapped_column(
+        ForeignKey("evolution_benchmark_manifests.manifest_id"), nullable=False
+    )
+    decision: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    safety_veto: Mapped[bool] = mapped_column(nullable=False)
+    evaluated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+class ChampionRegistryEventModel(Base):
+    __tablename__ = "champion_registry_events"
+    event_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    expert_id: Mapped[str] = mapped_column(String(96), nullable=False, index=True)
+    champion_version_id: Mapped[str] = mapped_column(
+        ForeignKey("evolvable_expert_versions.expert_version_id"), nullable=False
+    )
+    action: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
 def _forbid_mutation(_mapper: Any, _connection: Any, target: Any) -> None:
     raise ImmutableRecordError(
         f"{type(target).__name__} {getattr(target, 'provenance_id', '')} is immutable"
@@ -1738,6 +1822,13 @@ for _model in (
     ExpertRoutingModel,
     ExpertScorecardModel,
     ExpertComparisonModel,
+    ImprovementProposalModel,
+    EvolvableExpertVersionModel,
+    EvolutionErrorAttributionModel,
+    EvolutionBenchmarkManifestModel,
+    EvolutionHoldoutAccessModel,
+    ChallengerEvaluationModel,
+    ChampionRegistryEventModel,
     SourceModel,
     EvidenceModel,
     EventModel,

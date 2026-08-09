@@ -339,3 +339,9 @@ Fixed domain experts sit inside the Research Plane behind an audited read-only t
 capability manifests are separate from host grants. PostgreSQL stores immutable definitions,
 sessions, tool audits, assessments, routing, comparisons, and scorecards. Deterministic routing and
 skeptical panels do not change the validated-signal or paper-runtime boundary.
+# v0.19 champion/challenger plane
+
+Expert evolution is an append-only research-plane workflow. Immutable failure attribution,
+proposals, expert versions, benchmark manifests, holdout audits, evaluations, and champion events
+sit above the existing review/experiment boundary. Current champions are derived from registry
+events; automatic production activation and runtime-risk mutation do not exist.

@@ -18,3 +18,7 @@ Historical records remain unchanged.
 Limitations include small synthetic benchmarks, no causal proof of specialist value, and provider
 memorization that anonymization cannot fully eliminate. Review and experiment validation remain
 mandatory.
+
+Champion/challenger evaluation separates development, validation, protected challenge, and final
+holdout data. Comparisons use paired cases and component metrics; safety vetoes dominate quality
+gains. Repeated adaptive holdout use is rejected and automatic promotion remains disabled.

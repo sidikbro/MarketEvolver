@@ -27,6 +27,8 @@ from market_evolver.company.schemas import (
 )
 from market_evolver.company.seed import seed_companies
 from market_evolver.config import TelegramSourceConfig
+from market_evolver.evolve.repository import SqlEvolutionRepository
+from market_evolver.evolve.schemas import ApprovalState, ExpertVersion
 from market_evolver.experiment.repository import SqlExperimentRepository
 from market_evolver.experiment.schemas import (
     BacktestResult,
@@ -155,9 +157,9 @@ def migrated_engine(postgres_url: str):
         os.environ["MARKET_EVOLVER_DATABASE_URL"] = previous
 
 
-def test_migrations_reach_0017(migrated_engine) -> None:
+def test_migrations_reach_0018(migrated_engine) -> None:
     with migrated_engine.connect() as connection:
-        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0017"
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0018"
 
 
 def test_telegram_revision_cutoff_and_append_only(migrated_engine, tmp_path: Path) -> None:
@@ -1067,4 +1069,35 @@ def test_expert_definition_and_database_append_only(migrated_engine) -> None:
         connection.execute(
             text("UPDATE expert_definitions SET status='suspended' WHERE definition_id=:id"),
             {"id": expert.definition_id},
+        )
+
+
+def test_evolvable_expert_version_database_append_only(migrated_engine) -> None:
+    now = datetime.now(UTC)
+    item = ExpertVersion(
+        f"expert:{uuid4().hex}",
+        None,
+        None,
+        "prompt/1",
+        (("max_items", "10"),),
+        ("get_events",),
+        ("check evidence",),
+        ("official",),
+        "model/1",
+        now,
+        "governance:integration",
+        ApprovalState.CHAMPION,
+        None,
+        (),
+        ("integration",),
+    )
+    with Session(migrated_engine) as session:
+        repo = SqlEvolutionRepository(session)
+        repo.add_version(item)
+        session.commit()
+        version_id = item.expert_version_id
+    with pytest.raises(DBAPIError), migrated_engine.begin() as connection:
+        connection.execute(
+            text("DELETE FROM evolvable_expert_versions WHERE expert_version_id=:id"),
+            {"id": version_id},
         )
