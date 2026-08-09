@@ -345,3 +345,9 @@ Expert evolution is an append-only research-plane workflow. Immutable failure at
 proposals, expert versions, benchmark manifests, holdout audits, evaluations, and champion events
 sit above the existing review/experiment boundary. Current champions are derived from registry
 events; automatic production activation and runtime-risk mutation do not exist.
+# v0.20 topology champion
+
+The fixed expert organization is represented as immutable topology versions and append-only
+activation events. Gap detection and topology challengers remain in the Research Plane. Certified
+topologies still require operator activation and cannot alter research validation, deterministic
+risk, or the paper-only execution boundary. Replay resolves topology from the cutoff-visible event.

@@ -21,3 +21,7 @@ the recipient domain; it is never copied automatically.
 
 Automatic promotion is designed as a policy field but is `false` in v0.19. No model/expert identity
 can approve itself. Operator/governance promotion and rollback are immutable audit events.
+
+v0.20 extends the proposal pattern to topology but does not let expert-version improvement expand
+capabilities or create/activate specialists directly. Those changes require topology certification
+and a separate governance activation event.

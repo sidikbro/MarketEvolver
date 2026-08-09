@@ -260,3 +260,9 @@ dataset access is audited, with final-holdout reuse rejected. Fabricated results
 persisted benchmark manifest and safety veto. Models cannot self-promote. Prior champions cannot be
 deleted or overwritten, and rollback appends a new pointer event. Feedback and model suggestions are
 untrusted data, limiting improvement-prompt injection.
+# v0.20 topology threats
+
+Parent-subset validation blocks hidden capability escalation and runtime/broker/risk access. Complete
+certification and persisted benchmark inputs block fabricated topology results. Final-holdout reuse,
+future-topology leakage, router bypass, self-activation, and deletion of retired history fail closed.
+Prompt-like feedback remains untrusted data. Safety veto outranks quality and cost gains.

@@ -21,3 +21,7 @@ Safety veto overrides all performance. Promotion then requires a separate govern
 Rollback points the registry to a retained prior champion and records actor, reason, time, and
 affected sessions. It does not alter outputs produced by the degraded version. Monitoring may emit
 `REVIEW_REQUIRED`; it never automatically replaces a champion.
+
+The whole topology is also a champion. Topology challengers use the same separated benchmark and
+holdout discipline, while recording routing accuracy, panel behavior, cost, latency, and duplicate
+work. Expert and topology champion pointers are independent append-only registries.

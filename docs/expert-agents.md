@@ -27,3 +27,7 @@ governor → paper runtime`.
 
 Expert evolution creates immutable versions from bounded proposals; it never mutates a definition in
 place or expands its host-granted capabilities. Champion changes require governance approval.
+
+New topology experts remain candidates until capability inheritance, adversarial tests, specialist
+benchmarks, holdout evaluation, and operator activation all pass. Retirement affects routing only and
+preserves historical research.
