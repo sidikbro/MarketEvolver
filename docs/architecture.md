@@ -1,5 +1,12 @@
 # Architecture
 
+Version 0.21 adds a deterministic validation boundary around the existing
+platform. A disposable pgvector PostgreSQL service validates migrations and
+database invariants, while a typed integration manifest connects every existing
+research and paper-runtime stage through immutable provenance checkpoints.
+DuckDB/Parquet and the raw artifact store are exercised with explicit hash
+verification. This adds validation infrastructure, not research capability.
+
 Version 0.16 adds an experiment boundary after governed research and before any
 hypothetical market action. Immutable hypotheses feed typed signal observations;
 validated experiment specs feed a long-only historical simulator; immutable

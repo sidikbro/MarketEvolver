@@ -266,3 +266,13 @@ Parent-subset validation blocks hidden capability escalation and runtime/broker/
 certification and persisted benchmark inputs block fabricated topology results. Final-holdout reuse,
 future-topology leakage, router bypass, self-activation, and deletion of retired history fail closed.
 Prompt-like feedback remains untrusted data. Safety veto outranks quality and cost gains.
+
+# v0.21 integration threats
+
+Test environments can accidentally target production, silently skip critical suites, conceal migration
+drift, or accept corrupted cross-store artifacts. The Compose database uses isolated test credentials,
+localhost binding, and ephemeral storage. Full validation fails when PostgreSQL is unavailable or
+skipped. Clean migrations, database constraints, append-only triggers, cutoff replay, provenance chains,
+raw and Parquet hashes, topology history, and paper-accounting transitions are checked independently.
+Synthetic scenarios establish contract integrity only; they do not validate live sources or research
+quality.
