@@ -199,7 +199,8 @@ class TransmissionPath:
             self.rationale.casefold(),
         ):
             raise ValidationError("transmission path cannot encode investment direction")
-        object.__setattr__(self, "path_id", content_id("geopolitical-transmission", self))
+        # Keep deterministic identifiers within the persisted VARCHAR(96) contract.
+        object.__setattr__(self, "path_id", content_id("geo-transmission", self))
 
 
 @dataclass(frozen=True, slots=True)
@@ -224,4 +225,4 @@ class GeopoliticalCorroboration:
             raise ValidationError("independent or official corroboration requires distinct sources")
         if not 0 <= self.confidence <= 1:
             raise ValidationError("corroboration confidence must be between zero and one")
-        object.__setattr__(self, "corroboration_id", content_id("geopolitical-corroboration", self))
+        object.__setattr__(self, "corroboration_id", content_id("geo-corroboration", self))

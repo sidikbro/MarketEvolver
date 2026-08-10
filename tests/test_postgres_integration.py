@@ -10,7 +10,7 @@ from uuid import uuid4
 import pytest
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
@@ -149,6 +149,11 @@ def postgres_url() -> str:
 def migrated_engine(postgres_url: str):
     previous = os.environ.get("MARKET_EVOLVER_DATABASE_URL")
     os.environ["MARKET_EVOLVER_DATABASE_URL"] = postgres_url
+    clean_engine = create_engine(postgres_url)
+    with clean_engine.begin() as connection:
+        connection.execute(text("DROP SCHEMA public CASCADE"))
+        connection.execute(text("CREATE SCHEMA public"))
+    clean_engine.dispose()
     command.upgrade(Config("alembic.ini"), "head")
     engine = create_engine(postgres_url)
     yield engine
@@ -162,6 +167,51 @@ def migrated_engine(postgres_url: str):
 def test_migrations_reach_0019(migrated_engine) -> None:
     with migrated_engine.connect() as connection:
         assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0019"
+
+
+def test_migration_idempotency_indexes_constraints_and_transaction_rollback(
+    migrated_engine, postgres_url: str
+) -> None:
+    previous = os.environ.get("MARKET_EVOLVER_DATABASE_URL")
+    os.environ["MARKET_EVOLVER_DATABASE_URL"] = postgres_url
+    try:
+        command.upgrade(Config("alembic.ini"), "head")
+    finally:
+        if previous is None:
+            os.environ.pop("MARKET_EVOLVER_DATABASE_URL", None)
+        else:
+            os.environ["MARKET_EVOLVER_DATABASE_URL"] = previous
+    index_names = {
+        item["name"] for item in inspect(migrated_engine).get_indexes("topology_registry_events")
+    }
+    assert "ix_topology_registry_events_occurred_at" in index_names
+    token = uuid4().hex
+    with migrated_engine.connect() as connection:
+        transaction = connection.begin()
+        connection.execute(
+            text(
+                "INSERT INTO topology_proposals "
+                "(proposal_id, proposal_type, status, created_at, payload) "
+                "VALUES (:id, 'create_expert', 'proposed', now(), '{}')"
+            ),
+            {"id": token},
+        )
+        transaction.rollback()
+        assert (
+            connection.scalar(
+                text("SELECT count(*) FROM topology_proposals WHERE proposal_id=:id"), {"id": token}
+            )
+            == 0
+        )
+    with pytest.raises(DBAPIError), migrated_engine.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO topology_evaluations "
+                "(evaluation_id, proposal_id, challenger_topology_id, decision, safety_veto, evaluated_at, payload) "
+                "VALUES (:id, 'missing', 'missing', 'rejected', false, now(), '{}')"
+            ),
+            {"id": token},
+        )
 
 
 def test_telegram_revision_cutoff_and_append_only(migrated_engine, tmp_path: Path) -> None:

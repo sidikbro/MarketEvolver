@@ -1,0 +1,16 @@
+services:
+  postgres-test:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: marketevolver_test
+      POSTGRES_USER: marketevolver_test
+      POSTGRES_PASSWORD: marketevolver_test_only
+    ports:
+      - "127.0.0.1:55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U marketevolver_test -d marketevolver_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    tmpfs:
+      - /var/lib/postgresql/data

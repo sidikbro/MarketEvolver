@@ -1,0 +1,43 @@
+name: deterministic-validation
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: marketevolver_test
+          POSTGRES_USER: marketevolver_test
+          POSTGRES_PASSWORD: marketevolver_test_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U marketevolver_test -d marketevolver_test"
+          --health-interval 2s --health-timeout 3s --health-retries 30
+    env:
+      MARKET_EVOLVER_TEST_POSTGRES_URL: postgresql+psycopg://marketevolver_test:marketevolver_test_only@127.0.0.1:5432/marketevolver_test
+      MARKET_EVOLVER_DATABASE_URL: postgresql+psycopg://marketevolver_test:marketevolver_test_only@127.0.0.1:5432/marketevolver_test
+      MARKET_EVOLVER_ARTIFACT_ROOT: /tmp/marketevolver-ci-artifacts
+      MARKET_EVOLVER_MARKET_ROOT: /tmp/marketevolver-ci-market
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e ".[dev]"
+      - name: Full deterministic system validation
+        run: market-evolver validate-system
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+          if-no-files-found: warn

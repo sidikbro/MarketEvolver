@@ -452,11 +452,18 @@ def build_parser() -> argparse.ArgumentParser:
         item = topology_commands.add_parser(operation)
         item.add_argument("proposal_id")
     topology_commands.add_parser("rollback")
+    commands.add_parser("validate-system")
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    if args.command == "validate-system":
+        from market_evolver.validation import print_validation_report, validate_system
+
+        report = validate_system()
+        print_validation_report(report)
+        return int(report.status != "PASS")
     if args.command == "source":
         for source in DEFAULT_REGISTRY.list():
             state = "enabled" if source.enabled else "disabled"

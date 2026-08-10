@@ -7,6 +7,7 @@ from pathlib import Path
 
 import duckdb
 
+from market_evolver.errors import IntegrityViolation
 from market_evolver.paper.schemas import PaperAccountSnapshot
 
 
@@ -37,6 +38,11 @@ class NavHistoryStore:
     @staticmethod
     def sha256(path: Path) -> str:
         return hashlib.sha256(path.read_bytes()).hexdigest()
+
+    @classmethod
+    def verify(cls, path: Path, expected_sha256: str) -> None:
+        if cls.sha256(path) != expected_sha256:
+            raise IntegrityViolation("derived NAV Parquet hash mismatch")
 
     @staticmethod
     def rows(path: Path) -> int:
