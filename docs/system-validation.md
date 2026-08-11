@@ -1,5 +1,10 @@
 # System validation
 
+Controlled external validation is separate. `make validate` never contacts
+external sources. After it passes, an operator may run
+`make validate-live LIVE=YES`; see [live-validation.md](live-validation.md).
+Missing required operator identification is a reported skip, not a false pass.
+
 Run the complete deterministic validation with:
 
 ```bash

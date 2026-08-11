@@ -1,5 +1,15 @@
 # Data sources
 
+## v0.22 live-validation status
+
+BOI representative rates and policy interest, SEC submissions/companyfacts,
+BBC Business RSS, and CBS series 3763 have bounded reviewed contracts. Exact
+endpoints, request caps, access headers, storage policy, and replay classes are
+in [live-validation.md](live-validation.md). BOI snapshots and BBC RSS are
+forward-observation-only. SEC companyfacts and CBS series 3763 are temporally
+ambiguous because today's response does not prove past visibility. Historical
+BOI SDMX stays disabled pending a fixed series and vintage review.
+
 ## Bank of Israel policy interest
 
 - **Registry ID:** `il.boi`

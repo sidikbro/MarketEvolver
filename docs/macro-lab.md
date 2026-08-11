@@ -1,5 +1,14 @@
 # Macro Intelligence Lab
 
+## Live contract scope
+
+BOI current FX and policy endpoints are safe only for forward observation; they
+do not establish past visibility. Historical BOI SDMX remains disabled pending
+a fixed series key and vintage review. CBS series 3763 is the sole enabled CBS
+validation series. Its observation periods remain separate from local capture,
+but publication vintages cannot be proven, so it is temporally ambiguous and
+excluded from historical replay. CBS requires an identifying User-Agent.
+
 ## Point-in-time release model
 
 `MacroObservation` is an immutable source release, not current truth. It keeps

@@ -1,5 +1,14 @@
 # News Lab
 
+## BBC live validation
+
+The v0.22 workflow retrieves one bounded BBC Business RSS snapshot and never
+fetches linked article bodies. Raw XML is immutable before parsing, `pubDate`
+stays distinct from local observation time, and duplicate storage is
+idempotent. Resulting material remains untrusted unstructured evidence and
+cannot directly trigger paper execution. The feed is forward-observation-only
+because edits and removals cannot be reconstructed before first local capture.
+
 News evidence enters fusion with its original trust class, evidence provenance,
 publication time, and local first-observation time intact. Syndicated or copied
 articles are dependent observations, not multiple independent confirmations.

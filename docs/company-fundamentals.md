@@ -1,5 +1,14 @@
 # Company universe and fundamentals
 
+## Live SEC validation
+
+The v0.22 harness makes bounded submissions and companyfacts requests for Teva
+and Elbit Systems using exact CIKs and an operator-supplied SEC User-Agent. It
+validates accession metadata, form and filing dates, fiscal periods, and units
+without scraping filing HTML. Companyfacts may contain amended, dimensioned, or
+incomparable contexts; they remain temporally ambiguous, and a derived ratio is
+not emitted unless compatible observations naturally exist.
+
 ## Scope
 
 Version 0.8 adds a small, curated company universe and an immutable fundamentals
