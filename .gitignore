@@ -12,3 +12,4 @@ build/
 .coverage
 coverage.xml
 htmlcov/
+data/live_validation/

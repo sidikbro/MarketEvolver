@@ -171,10 +171,11 @@ DEFAULT_REGISTRY = SourceRegistry(
             expected_content_types=("application/json", "application/xml", "text/csv"),
             timezone="Asia/Jerusalem",
             ingestion_method=IngestionMethod.SDMX_API,
-            enabled=False,
+            enabled=True,
             revision_notes=(
-                "Statistical releases may be preliminary, seasonally adjusted, or revised; "
-                "release vintages must be retained."
+                "Only series 3763 is reviewed for bounded live validation. The current API "
+                "does not establish historical release vintages, so values remain temporally "
+                "ambiguous and must not enter historical replay."
             ),
         ),
         SourceDefinition(

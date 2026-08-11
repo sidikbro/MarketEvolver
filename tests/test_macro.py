@@ -217,8 +217,8 @@ class MacroLabTests(unittest.TestCase):
         self.assertEqual(telemetry.macro_series_count, 1)
         self.assertEqual(telemetry.macro_revision_rate, 0)
         self.assertEqual(len(STRUCTURAL_TREND_NAMES), 8)
+        self.assertTrue(DEFAULT_REGISTRY.get("il.cbs").enabled)
         for source_id in (
-            "il.cbs",
             "us.fred",
             "eu.ecb.data",
             "global.worldbank",

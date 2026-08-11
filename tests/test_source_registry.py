@@ -41,7 +41,7 @@ class SourceRegistryTests(unittest.TestCase):
             },
         )
         self.assertTrue(DEFAULT_REGISTRY.get("il.boi").enabled)
-        self.assertFalse(DEFAULT_REGISTRY.get("il.cbs").enabled)
+        self.assertTrue(DEFAULT_REGISTRY.get("il.cbs").enabled)
         self.assertFalse(DEFAULT_REGISTRY.get("il.tase.maya").enabled)
 
     def test_registry_rejects_duplicate_stable_ids(self) -> None:

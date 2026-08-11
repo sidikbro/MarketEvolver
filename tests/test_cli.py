@@ -12,7 +12,7 @@ class CliTests(unittest.TestCase):
             result = main(["source", "list"])
         self.assertEqual(result, 0)
         self.assertIn("il.boi\tenabled\tBank of Israel", output.getvalue())
-        self.assertIn("il.cbs\tdisabled", output.getvalue())
+        self.assertIn("il.cbs\tenabled", output.getvalue())
         self.assertIn("il.tase.maya\tdisabled", output.getvalue())
 
     def test_event_observatory_commands_are_registered(self) -> None:

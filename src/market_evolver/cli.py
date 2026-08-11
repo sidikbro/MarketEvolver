@@ -453,6 +453,10 @@ def build_parser() -> argparse.ArgumentParser:
         item.add_argument("proposal_id")
     topology_commands.add_parser("rollback")
     commands.add_parser("validate-system")
+    live = commands.add_parser("validate-live")
+    live.add_argument("--confirm-live", action="store_true")
+    live.add_argument("--root", type=Path, default=Path("data/live_validation"))
+    live.add_argument("--cleanup", action="store_true")
     return parser
 
 
@@ -464,6 +468,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         report = validate_system()
         print_validation_report(report)
         return int(report.status != "PASS")
+    if args.command == "validate-live":
+        from market_evolver.live_validation import LiveStatus, LiveValidationHarness
+
+        harness = LiveValidationHarness(args.root, opted_in=args.confirm_live)
+        live_report = harness.run()
+        print(live_report.json_text())
+        if args.cleanup:
+            harness.cleanup()
+        return int(live_report.status is LiveStatus.FAILED)
     if args.command == "source":
         for source in DEFAULT_REGISTRY.list():
             state = "enabled" if source.enabled else "disabled"
