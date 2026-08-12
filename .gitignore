@@ -13,3 +13,4 @@ build/
 coverage.xml
 htmlcov/
 data/live_validation/
+data/market/history/

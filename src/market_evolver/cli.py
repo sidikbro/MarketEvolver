@@ -79,6 +79,19 @@ from market_evolver.macro.schemas import (
     TrendHorizon,
 )
 from market_evolver.macro.trends import calculate_trend
+from market_evolver.market.history import (
+    BoiUsdIlsHistoryConnector,
+    CompositionHistoryStatus,
+    DatasetType,
+    HistoricalDataset,
+    HistoricalDatasetStore,
+    HistoricalReplayEligibility,
+    PriceAdjustmentPolicy,
+    SourceClass,
+    StooqDailyConnector,
+    SurvivorshipStatus,
+    validate_quality,
+)
 from market_evolver.market.schemas import AdjustmentStatus, MarketObservation, ObservationType
 from market_evolver.market.seed import seed_assets
 from market_evolver.market.store import MarketDataStore
@@ -248,9 +261,24 @@ def build_parser() -> argparse.ArgumentParser:
     market_commands = market.add_subparsers(dest="market_command", required=True)
     market_commands.add_parser("seed-assets")
     market_commands.add_parser("asset-list")
+    market_commands.add_parser("source-list")
     market_ingest = market_commands.add_parser("ingest")
     market_ingest.add_argument("path", type=Path)
     market_ingest.add_argument("--dataset-version", required=True)
+    market_history = market_commands.add_parser("ingest-history")
+    market_history.add_argument("source", choices=("boi", "stooq"))
+    market_history.add_argument("instrument")
+    market_history.add_argument("--from", dest="date_from", required=True)
+    market_history.add_argument("--to", dest="date_to", required=True)
+    market_history.add_argument("--symbol")
+    market_history.add_argument("--venue")
+    market_history.add_argument("--currency")
+    market_history.add_argument("--confirm-live", action="store_true")
+    market_validate = market_commands.add_parser("validate-dataset")
+    market_validate.add_argument("dataset_id")
+    market_quality = market_commands.add_parser("quality-report")
+    market_quality.add_argument("dataset_id")
+    market_commands.add_parser("coverage")
     replay = commands.add_parser("replay")
     replay_commands = replay.add_subparsers(dest="replay_command", required=True)
     replay_commands.add_parser("seed-cases")
@@ -477,6 +505,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.cleanup:
             harness.cleanup()
         return int(live_report.status is LiveStatus.FAILED)
+    if args.command == "market" and args.market_command == "source-list":
+        print("il.boi.sdmx.exr\tauthoritative_official\tUSD/ILS only")
+        print("global.stooq.experimental\tconvenience_experimental\tresearch only")
+        print("il.tase.maya\tdisabled\thistorical OHLCV contract unresolved")
+        return 0
     if args.command == "source":
         for source in DEFAULT_REGISTRY.list():
             state = "enabled" if source.enabled else "disabled"
@@ -1535,6 +1568,28 @@ def _market_command(args: argparse.Namespace, config: AppConfig, session: Sessio
             )
         )
         return 0
+    if args.market_command == "ingest-history":
+        return _market_history_ingest(args, config, session, store)
+    if args.market_command in {"validate-dataset", "quality-report"}:
+        history = HistoricalDatasetStore(config.market_storage.resolve_root() / "history")
+        manifest = history.root / "manifests" / f"{args.dataset_id}.json"
+        if not manifest.is_file():
+            raise GovernanceViolation("unknown historical dataset manifest")
+        document = json.loads(manifest.read_text(encoding="utf-8"))
+        paths = tuple(
+            history.root / "parquet" / relative for relative in document.get("parquet_paths", ())
+        )
+        if not paths:
+            paths = tuple((history.root / "parquet").rglob("bars.parquet"))
+        bars = history.read_bars(paths)
+        report = validate_quality(args.dataset_id, bars)
+        print(json.dumps(asdict(report), indent=2))
+        return int(report.status == "failed")
+    if args.market_command == "coverage":
+        history = HistoricalDatasetStore(config.market_storage.resolve_root() / "history")
+        paths = tuple((history.root / "parquet").rglob("bars.parquet"))
+        print(json.dumps(history.diagnostics(paths) if paths else {"rows": 0}, indent=2))
+        return 0
     try:
         document = json.loads(args.path.read_text(encoding="utf-8"))
         if not isinstance(document, list):
@@ -1555,6 +1610,140 @@ def _market_command(args: argparse.Namespace, config: AppConfig, session: Sessio
                 "duplicates": duplicates,
                 "bytes": partition.size_bytes,
             }
+        )
+    )
+    return 0
+
+
+def _market_history_ingest(
+    args: argparse.Namespace, config: AppConfig, session: Session, market_store: MarketDataStore
+) -> int:
+    if not args.confirm_live:
+        raise GovernanceViolation("historical live ingestion requires --confirm-live")
+    start = datetime.fromisoformat(args.date_from).date()
+    end = datetime.fromisoformat(args.date_to).date()
+    retrieved = datetime.now(UTC)
+    history = HistoricalDatasetStore(config.market_storage.resolve_root() / "history")
+    if args.source == "boi":
+        if args.instrument != "asset.fx.usdils":
+            raise GovernanceViolation("BOI historical connector is fixed to asset.fx.usdils")
+        boi_connector = BoiUsdIlsHistoryConnector()
+        body, uri = boi_connector.fetch(start, end)
+        raw = history.persist_raw(body, "text/csv")
+        bars = boi_connector.parse(body, retrieved_at=retrieved, artifact=raw)
+        source_class = SourceClass.AUTHORITATIVE_OFFICIAL
+        dataset_type = DatasetType.FX
+        venue = "BOI"
+        adjustment = PriceAdjustmentPolicy.NOT_APPLICABLE
+        survivorship = SurvivorshipStatus.UNKNOWN
+        composition = CompositionHistoryStatus.NOT_APPLICABLE
+    else:
+        if not all((args.symbol, args.venue, args.currency)):
+            raise GovernanceViolation("Stooq history requires --symbol, --venue, and --currency")
+        stooq_connector = StooqDailyConnector()
+        body = stooq_connector.fetch(args.symbol, start, end)
+        uri = "https://stooq.com/q/d/l/"
+        raw = history.persist_raw(body, "text/csv")
+        bars = stooq_connector.parse(
+            body,
+            instrument_id=args.instrument,
+            venue=args.venue,
+            currency=args.currency,
+            retrieved_at=retrieved,
+            artifact=raw,
+        )
+        source_class = SourceClass.CONVENIENCE_EXPERIMENTAL
+        dataset_type = DatasetType.EQUITY_OHLCV
+        venue = args.venue
+        adjustment = PriceAdjustmentPolicy.RAW_ONLY
+        survivorship = SurvivorshipStatus.CURRENT_CONSTITUENTS_ONLY
+        composition = CompositionHistoryStatus.UNAVAILABLE
+    quality = validate_quality("pending", bars, expected_currency=bars[0].currency)
+    if quality.status == "failed":
+        raise GovernanceViolation("historical dataset failed quality validation")
+    normalized_bytes = json.dumps(
+        [asdict(item) for item in bars], default=str, sort_keys=True, separators=(",", ":")
+    ).encode()
+    normalized = history.persist_raw(normalized_bytes, "application/json")
+    paths, hashes, parquet_bytes = history.write_bars(
+        bars, source_id=bars[0].source_id, venue=venue
+    )
+    observations = tuple(
+        MarketObservation(
+            item.instrument_id,
+            item.venue,
+            ObservationType.FX_RATE if dataset_type is DatasetType.FX else ObservationType.OHLCV,
+            item.market_timestamp,
+            item.retrieved_at,
+            item.source_id,
+            AdjustmentStatus.RAW,
+            item.currency,
+            item.parser_version,
+            (item.raw_artifact_id, f"normalized:sha256:{normalized.sha256}"),
+            None if dataset_type is DatasetType.FX else item.raw_open,
+            None if dataset_type is DatasetType.FX else item.raw_high,
+            None if dataset_type is DatasetType.FX else item.raw_low,
+            None if dataset_type is DatasetType.FX else item.raw_close,
+            None if dataset_type is DatasetType.FX else item.volume,
+            item.raw_close if dataset_type is DatasetType.FX else None,
+        )
+        for item in bars
+    )
+    partition, inserted, duplicates = market_store.write_observations(
+        observations, dataset_version="historical-bars/1", created_at=retrieved
+    )
+    contract_fields = tuple(sorted(body.decode("utf-8-sig").splitlines()[0].split(",")))
+    contract_hash = (
+        "sha256:"
+        + hashlib.sha256(json.dumps(contract_fields, separators=(",", ":")).encode()).hexdigest()
+    )
+    dataset = HistoricalDataset(
+        bars[0].source_id,
+        source_class,
+        dataset_type,
+        tuple(sorted({item.instrument_id for item in bars})),
+        venue,
+        "1d",
+        bars[0].market_date,
+        bars[-1].market_date,
+        retrieved,
+        datetime.now(UTC),
+        (f"sha256:{raw.sha256}",),
+        (f"sha256:{normalized.sha256}",),
+        hashes,
+        tuple(path.relative_to(history.root / "parquet").as_posix() for path in paths),
+        len(bars),
+        "Asia/Jerusalem" if venue == "BOI" else "America/New_York",
+        adjustment,
+        "explicit actions only; unavailable actions degrade backtests",
+        survivorship,
+        composition,
+        bars[0].parser_version,
+        "historical-bars/1",
+        (f"request:{uri}", f"raw:sha256:{raw.sha256}", f"normalized:sha256:{normalized.sha256}"),
+        HistoricalReplayEligibility.OUTCOME_MEASUREMENT_ONLY,
+        (("from", start.isoformat()), ("to", end.isoformat())),
+        contract_hash,
+        "runtime-commit",
+    )
+    manifest = history.write_manifest(dataset)
+    session.commit()
+    print(
+        json.dumps(
+            {
+                "dataset_id": dataset.dataset_id,
+                "manifest": str(manifest),
+                "rows": len(bars),
+                "inserted": inserted,
+                "duplicates": duplicates,
+                "raw_bytes": len(body),
+                "normalized_bytes": len(normalized_bytes),
+                "parquet_bytes": parquet_bytes,
+                "market_partition": partition.sha256,
+                "quality": quality.status,
+                "replay_eligibility": dataset.replay_eligibility.value,
+            },
+            indent=2,
         )
     )
     return 0

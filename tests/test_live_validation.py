@@ -79,7 +79,9 @@ def test_schema_drift_fails_closed_after_raw_persistence(tmp_path: Path) -> None
     def fetch(contract: SourceContract, user_agent: str) -> HttpObservation:
         return HttpObservation(200, contract.endpoint, "application/json", b'{"changed":true}')
 
-    harness = LiveValidationHarness(tmp_path / "live_validation", opted_in=True, fetch=fetch)
+    harness = LiveValidationHarness(
+        tmp_path / "live_validation", opted_in=True, environment={}, fetch=fetch
+    )
     result = harness._boi_fx()
     assert result.status is LiveStatus.FAILED
     assert "required fields missing" in result.errors[0]
