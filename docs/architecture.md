@@ -25,6 +25,13 @@ The runner writes a content-addressed raw artifact before normalization, then
 appends untrusted social-post versions, Telegram receipts, checkpoints, and run
 manifests. Credentials remain environment-only and never cross into storage.
 
+Version 0.24 adds a separate live-validation boundary around that adapter. A
+double operator opt-in and local reviewed allowlist constrain collection;
+content-addressed artifacts precede normalization; deterministic unreviewed
+narratives and rumors remain inside the untrusted research plane. Alembic
+revision `0020` preserves hashtags without changing authority or execution
+capabilities.
+
 ## Scope and boundary
 
 MarketEvolver currently defines a research domain, not a trading system. The

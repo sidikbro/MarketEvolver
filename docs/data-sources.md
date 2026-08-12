@@ -183,3 +183,10 @@ Forwards retain visible native origins or an explicit unknown-origin marker.
 Media collection is metadata-only. API access, retention legality, channel
 identity, revision behavior, and deletion observability must be reviewed per
 source before enablement.
+
+Version 0.24 still commits no channel identifiers. An operator may validate one
+to eight locally reviewed public usernames, ideally three to eight across news,
+business, technology, geopolitical, and negative-control classes. These remain
+untrusted social sources regardless of reputation or apparent publisher
+identity. The live sample is bounded to 50 recent messages per source and is
+not evidence of historical completeness.

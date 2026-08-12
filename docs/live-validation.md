@@ -52,3 +52,7 @@ bounded workload, not capacity forecasts. Snapshot APIs cannot reconstruct
 uncaptured vintages. Fusion is reported as `no fusion candidate` unless live
 claims naturally match, and ratios are not manufactured from incompatible SEC
 facts.
+
+Telegram validation is a separate command, configuration surface, and artifact
+subtree. It is never included implicitly in `validate-live`; follow the bounded
+workflow in [telegram-live-validation.md](telegram-live-validation.md).

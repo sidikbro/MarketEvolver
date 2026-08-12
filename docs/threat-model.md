@@ -276,3 +276,16 @@ skipped. Clean migrations, database constraints, append-only triggers, cutoff re
 raw and Parquet hashes, topology history, and paper-accounting transitions are checked independently.
 Synthetic scenarios establish contract integrity only; they do not validate live sources or research
 quality.
+
+# v0.24 Telegram live-validation threats
+
+Session theft, accidental private-source access, unbounded collection, hidden
+forward origins, command-like text, mutable engagement metrics, edit/deletion
+ambiguity, and unlawful retention are primary risks. Double opt-in, local
+allowlisting, public-entity validation, a 50-message cap, metadata-only media,
+content addressing, redacted ignored artifacts, and bounded backoff limit
+exposure. Text always remains untrusted; forwards/copies are not independent
+confirmation; candidates remain unreviewed. Public accessibility does not prove
+publisher identity, claim truth, retention rights, or historical completeness,
+and operators remain responsible for per-source legal review and deletion of
+expired validation artifacts.

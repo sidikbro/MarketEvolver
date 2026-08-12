@@ -27,3 +27,8 @@ independent corroboration.
 Telegram posts enter this same untrusted boundary. Native forwards are counted
 separately from originals; hidden origins remain unknown. Connector credentials
 never enter social records, and raw Telegram text receives no new authority.
+
+The v0.24 live harness exercises this boundary on a small local allowlist. It
+persists hashtags and creates only unreviewed candidates using deterministic
+rules. Its deliberately small sample cannot establish source reliability;
+reputation remains observational and explicitly insufficient-history.

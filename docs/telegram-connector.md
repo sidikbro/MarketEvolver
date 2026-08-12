@@ -69,3 +69,9 @@ must remain outside Git.
 Known limitations include API visibility changes, unavailable or mutable
 engagement counters, hidden forward origins, ambiguous missing-message gaps,
 and the absence of a configured production allowlist in the repository.
+
+Version 0.24 adds a separate, doubly opted-in validation harness capped at 50
+recent messages per reviewed source. It preserves hashtags, emits only
+unreviewed deterministic narrative/rumor candidates, classifies native forward
+lineage, and writes redacted reports outside Git. See
+[telegram-live-validation.md](telegram-live-validation.md).
