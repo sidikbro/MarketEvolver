@@ -923,6 +923,118 @@ class RealReplayCommitmentModel(Base):
     payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
 
 
+class EvidenceVintageModel(Base):
+    __tablename__ = "evidence_vintages"
+    vintage_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    source_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    artifact_sha256: Mapped[str] = mapped_column(
+        ForeignKey("artifacts.sha256"), nullable=False, index=True
+    )
+    canonical_uri: Mapped[str] = mapped_column(String(2048), nullable=False, index=True)
+    source_published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    first_observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    archived_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    retrieval_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    valid_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    valid_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revision_of: Mapped[str | None] = mapped_column(ForeignKey("evidence_vintages.vintage_id"))
+    archive_source: Mapped[str] = mapped_column(String(128), nullable=False)
+    archive_confidence: Mapped[str] = mapped_column(String(16), nullable=False)
+    classification: Mapped[str] = mapped_column(String(48), nullable=False, index=True)
+    provenance: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    server_date_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    source_timezone: Mapped[str] = mapped_column(String(64), nullable=False)
+    response_metadata: Mapped[list[list[str]]] = mapped_column(JSON, nullable=False)
+    retention_class: Mapped[str] = mapped_column(String(48), nullable=False)
+
+    @classmethod
+    def from_domain(cls, item: Any) -> EvidenceVintageModel:
+        return cls(
+            vintage_id=item.vintage_id,
+            source_id=item.source_id,
+            artifact_sha256=item.artifact_id.removeprefix("sha256:"),
+            canonical_uri=item.canonical_uri,
+            source_published_at=item.source_published_at,
+            first_observed_at=item.first_observed_at,
+            archived_at=item.archived_at,
+            retrieval_at=item.retrieval_at,
+            valid_from=item.valid_from,
+            valid_until=item.valid_until,
+            revision_of=item.revision_of,
+            archive_source=item.archive_source,
+            archive_confidence=item.archive_confidence.value,
+            classification=item.classification.value,
+            provenance=list(item.provenance),
+            server_date_at=item.server_date_at,
+            source_timezone=item.source_timezone,
+            response_metadata=[list(value) for value in item.response_metadata],
+            retention_class=item.retention_class.value,
+        )
+
+
+class ArchiveRunModel(Base):
+    __tablename__ = "archive_runs"
+    run_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    source_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    finished_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    snapshots: Mapped[int] = mapped_column(Integer, nullable=False)
+    inserted: Mapped[int] = mapped_column(Integer, nullable=False)
+    duplicates: Mapped[int] = mapped_column(Integer, nullable=False)
+    bytes_downloaded: Mapped[int] = mapped_column(Integer, nullable=False)
+    revisions: Mapped[int] = mapped_column(Integer, nullable=False)
+    gaps: Mapped[int] = mapped_column(Integer, nullable=False)
+    error_summary: Mapped[str | None] = mapped_column(String(256))
+
+    @classmethod
+    def from_domain(cls, item: Any) -> ArchiveRunModel:
+        return cls(
+            **{
+                **{
+                    key: getattr(item, key)
+                    for key in (
+                        "run_id",
+                        "source_id",
+                        "started_at",
+                        "finished_at",
+                        "snapshots",
+                        "inserted",
+                        "duplicates",
+                        "bytes_downloaded",
+                        "revisions",
+                        "gaps",
+                        "error_summary",
+                    )
+                },
+                "status": item.status.value,
+            }
+        )
+
+
+class ArchiveGapModel(Base):
+    __tablename__ = "archive_gaps"
+    gap_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    source_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    expected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    detected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    reason: Mapped[str] = mapped_column(String(256), nullable=False)
+    resolved_by_vintage_id: Mapped[str | None] = mapped_column(
+        ForeignKey("evidence_vintages.vintage_id")
+    )
+
+    @classmethod
+    def from_domain(cls, item: Any) -> ArchiveGapModel:
+        return cls(
+            gap_id=item.gap_id,
+            source_id=item.source_id,
+            expected_at=item.expected_at,
+            detected_at=item.detected_at,
+            reason=item.reason,
+            resolved_by_vintage_id=item.resolved_by_vintage_id,
+        )
+
+
 class MacroObservationModel(Base):
     __tablename__ = "macro_observations"
 
@@ -1876,6 +1988,9 @@ for _model in (
     BenchmarkPairModel,
     RealReplayCaseModel,
     RealReplayCommitmentModel,
+    EvidenceVintageModel,
+    ArchiveRunModel,
+    ArchiveGapModel,
     MacroObservationModel,
     TrendSignalModel,
     TrendDivergenceModel,

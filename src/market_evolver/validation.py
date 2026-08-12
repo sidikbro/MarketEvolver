@@ -155,12 +155,12 @@ def _migration_check(url: str, root: Path, environment: dict[str, str]) -> Valid
     try:
         with engine.connect() as connection:
             version = connection.scalar(text("SELECT version_num FROM alembic_version"))
-        status = "PASS" if version == "0021" else "FAIL"
+        status = "PASS" if version == "0022" else "FAIL"
         return ValidationCheck(
             "migrations",
             status,
             migrated.command,
-            f"clean/idempotent migration head={version}; expected=0021",
+            f"clean/idempotent migration head={version}; expected=0022",
         )
     finally:
         engine.dispose()

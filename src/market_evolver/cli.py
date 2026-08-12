@@ -114,6 +114,7 @@ from market_evolver.paper.schemas import (
     PaperPortfolio,
     PortfolioStatus,
 )
+from market_evolver.provenance import content_id
 from market_evolver.replay.benchmark import BenchmarkRunner, benchmark_metrics
 from market_evolver.replay.engine import ReplayEngine
 from market_evolver.replay.repositories import SqlReplayRepository
@@ -293,6 +294,13 @@ def build_parser() -> argparse.ArgumentParser:
     replay_commands.add_parser("real-seed")
     real_report = replay_commands.add_parser("real-report")
     real_report.add_argument("--root", type=Path, default=Path("data/real_replay"))
+    archive = commands.add_parser("archive")
+    archive_commands = archive.add_subparsers(dest="archive_command", required=True)
+    archive_commands.add_parser("run")
+    archive_source = archive_commands.add_parser("source")
+    archive_source.add_argument("source_id")
+    archive_commands.add_parser("status")
+    archive_commands.add_parser("backfill-report")
     benchmark = commands.add_parser("benchmark")
     benchmark_commands = benchmark.add_subparsers(dest="benchmark_command", required=True)
     benchmark_commands.add_parser("run")
@@ -614,6 +622,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _market_command(args, config, session)
         if args.command == "replay":
             return _replay_command(args, config, session)
+        if args.command == "archive":
+            return _archive_command(args, config, session)
         if args.command == "benchmark":
             return _benchmark_command(args, config, session)
         if args.command in {"macro", "trends"}:
@@ -1835,6 +1845,78 @@ def _replay_command(args: argparse.Namespace, config: AppConfig, session: Sessio
         now=datetime.now(UTC),
     )
     print(json.dumps(_run_dict(run), indent=2))
+    return 0
+
+
+def _archive_command(args: argparse.Namespace, config: AppConfig, session: Session) -> int:
+    from market_evolver.archive.repository import SqlArchiveRepository
+    from market_evolver.archive.schemas import ArchiveRunManifest, ArchiveRunStatus
+    from market_evolver.archive.service import (
+        ARCHIVE_JOBS,
+        archive_storage_projection,
+        replay_backfill_report,
+        write_archive_reports,
+    )
+    from market_evolver.replay.real import curated_real_cases
+
+    repository = SqlArchiveRepository(session)
+    if args.archive_command == "status":
+        coverage = repository.coverage()
+        total_bytes = sum(item.bytes_archived for item in coverage)
+        report = write_archive_reports(
+            config.artifact_storage.resolve_root() / "archive" / "reports", session
+        )
+        print(
+            json.dumps(
+                {
+                    "coverage": [asdict(item) for item in coverage],
+                    "storage_projection": archive_storage_projection(total_bytes),
+                    "report": str(report),
+                },
+                default=str,
+                indent=2,
+            )
+        )
+        return 0
+    if args.archive_command == "backfill-report":
+        print(json.dumps(replay_backfill_report(curated_real_cases()), indent=2))
+        return 0
+    selected = (
+        ARCHIVE_JOBS
+        if args.archive_command == "run"
+        else tuple(item for item in ARCHIVE_JOBS if item.source_id == args.source_id)
+    )
+    if not selected:
+        raise GovernanceViolation("unknown archive source job")
+    now = datetime.now(UTC)
+    results = []
+    for job in selected:
+        manifest = ArchiveRunManifest(
+            content_id("archive-scheduled-run", {"source": job.source_id, "at": now}),
+            job.source_id,
+            now,
+            now,
+            ArchiveRunStatus.SKIPPED,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            "adapter_not_operator_configured" if job.enabled else "source_disabled",
+        )
+        repository.add_run(manifest)
+        results.append(
+            {
+                "source_id": job.source_id,
+                "status": manifest.status.value,
+                "reason": manifest.error_summary,
+                "expected_frequency": job.expected_frequency,
+                "archive_discovery": job.archive_discovery,
+            }
+        )
+    session.commit()
+    print(json.dumps(results, indent=2))
     return 0
 
 

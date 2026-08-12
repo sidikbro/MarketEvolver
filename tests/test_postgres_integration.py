@@ -27,6 +27,7 @@ from market_evolver.company.schemas import (
 )
 from market_evolver.company.seed import seed_companies
 from market_evolver.config import TelegramSourceConfig
+from market_evolver.errors import ImmutableRecordError
 from market_evolver.evolve.repository import SqlEvolutionRepository
 from market_evolver.evolve.schemas import ApprovalState, ExpertVersion
 from market_evolver.experiment.repository import SqlExperimentRepository
@@ -164,9 +165,43 @@ def migrated_engine(postgres_url: str):
         os.environ["MARKET_EVOLVER_DATABASE_URL"] = previous
 
 
-def test_migrations_reach_0021(migrated_engine) -> None:
+def test_migrations_reach_0022(migrated_engine) -> None:
     with migrated_engine.connect() as connection:
-        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0021"
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0022"
+
+
+@pytest.mark.postgres
+def test_evidence_vintage_archive_and_database_append_only(migrated_engine, tmp_path) -> None:
+    from market_evolver.archive.schemas import ArchiveConfidence, VintageClassification
+    from market_evolver.archive.service import ArchivePayload, ArchiveService
+    from market_evolver.storage.models import EvidenceVintageModel
+
+    at = datetime(2025, 1, 1, tzinfo=UTC)
+    with Session(migrated_engine) as session:
+        service = ArchiveService(session, tmp_path / "archive")
+        vintage, inserted = service.archive(
+            ArchivePayload(
+                "il.boi",
+                "https://www.boi.org.il/archive/fixture",
+                b"fixture",
+                "application/json",
+                at,
+                at,
+                at,
+                "Asia/Jerusalem",
+                (),
+                VintageClassification.OBSERVED_LIVE_AT_TIME,
+                "direct_live_observation",
+                ArchiveConfidence.HIGH,
+            )
+        )
+        assert inserted
+        row = session.get(EvidenceVintageModel, vintage.vintage_id)
+        assert row is not None
+        row.classification = "mutated"
+        with pytest.raises((DBAPIError, ImmutableRecordError), match="immutable"):
+            session.commit()
+        session.rollback()
 
 
 @pytest.mark.postgres
@@ -189,7 +224,7 @@ def test_real_replay_cases_commitments_and_append_only(migrated_engine) -> None:
         row = session.get(RealReplayCaseModel, cases[0].case_id)
         assert row is not None
         row.status = "MUTATED"
-        with pytest.raises(DBAPIError, match="immutable"):
+        with pytest.raises((DBAPIError, ImmutableRecordError), match="immutable"):
             session.commit()
         session.rollback()
 
