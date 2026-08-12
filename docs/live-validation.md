@@ -26,7 +26,7 @@ generated `live-*` directory beneath `live_validation`.
 |---|---|---:|---|
 | BOI current FX | `https://www.boi.org.il/PublicApi/GetExchangeRates` | 1 MB, one request | forward observation only |
 | BOI policy | `https://www.boi.org.il/PublicApi/GetInterest` | 100 KB, one request | forward observation only |
-| BOI historical FX | BOI SDMX | disabled pending fixed series key/vintage review | temporally ambiguous |
+| BOI historical FX | BOI SDMX `RER_USD_ILS` | 5 MB, bounded to ten years | outcome measurement only |
 | SEC submissions | `https://data.sec.gov/submissions/CIK{cik}.json` | 20 MB, one request/CIK | temporally ambiguous |
 | SEC company facts | `https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json` | 20 MB, one request/CIK | temporally ambiguous |
 | BBC Business | `https://feeds.bbci.co.uk/news/business/rss.xml` | 2 MB, one request | forward observation only |

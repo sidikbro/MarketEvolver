@@ -1,5 +1,11 @@
 # Historical research replay
 
+Historical price rows distinguish market time, retrieval time, and optional
+source record/revision time. A price can support deterministic outcome
+measurement without proving today's API representation was historically
+visible. v0.23 manifests encode this as `outcome_measurement_only`; research
+evidence cutoffs remain independently governed.
+
 Backtest replay consumes the same cutoff-correct market catalog and persists a
 manifest of every Parquet hash, source version, parameter hash, code version,
 and seed. Experiment signals must carry their own observation time and

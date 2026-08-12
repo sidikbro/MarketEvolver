@@ -1,5 +1,11 @@
 # Historical Backtesting
 
+Version 0.23 historical datasets may feed the existing fixed cash,
+buy-and-hold, momentum, and mean-reversion plumbing checks. Parameters are not
+searched or optimized. Results must surface dataset adjustment,
+corporate-action, survivorship, composition, and replay-eligibility fields.
+Convenience data cannot support investable or survivorship-free claims.
+
 The v0.16 engine is a research simulator, not a trading system. It supports only
 long-only positions, cash, daily or event-driven decisions, and single-position,
 fixed-notional, or simple equal-weight policies. There is no broker, order API,

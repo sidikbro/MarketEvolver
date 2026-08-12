@@ -1,5 +1,13 @@
 # Data sources
 
+## Historical market data
+
+BOI SDMX `RER_USD_ILS` is the official bounded USD/ILS historical source. Stooq
+CSV is optional convenience/experimental data and never official TASE or U.S.
+exchange data. TASE/MAYA historical OHLCV remains disabled. See
+[historical-market-data.md](historical-market-data.md) and
+[market-data-quality.md](market-data-quality.md).
+
 ## v0.22 live-validation status
 
 BOI representative rates and policy interest, SEC submissions/companyfacts,
