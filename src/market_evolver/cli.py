@@ -290,6 +290,9 @@ def build_parser() -> argparse.ArgumentParser:
     replay_run.add_argument("--anonymized", action="store_true")
     replay_inspect = replay_commands.add_parser("inspect")
     replay_inspect.add_argument("run_id")
+    replay_commands.add_parser("real-seed")
+    real_report = replay_commands.add_parser("real-report")
+    real_report.add_argument("--root", type=Path, default=Path("data/real_replay"))
     benchmark = commands.add_parser("benchmark")
     benchmark_commands = benchmark.add_subparsers(dest="benchmark_command", required=True)
     benchmark_commands.add_parser("run")
@@ -1767,6 +1770,38 @@ def _market_history_ingest(
 
 
 def _replay_command(args: argparse.Namespace, config: AppConfig, session: Session) -> int:
+    if args.replay_command in {"real-seed", "real-report"}:
+        from market_evolver.replay.real import (
+            SqlRealReplayRepository,
+            build_commitments,
+            curated_real_cases,
+            write_real_replay_reports,
+        )
+
+        cases = curated_real_cases()
+        commitments = build_commitments(cases, datetime.now(UTC))
+        real_repository = SqlRealReplayRepository(session)
+        for real_case in cases:
+            real_repository.add_case(real_case)
+        for commitment in commitments:
+            real_repository.add_commitment(commitment)
+        session.commit()
+        result: dict[str, object] = {
+            "cases": len(cases),
+            "usable": sum(real_case.status.value == "USABLE" for real_case in cases),
+            "cutoffs": sum(len(real_case.cutoff_timestamps) for real_case in cases),
+            "sealed_commitments": len(commitments),
+        }
+        if args.replay_command == "real-report":
+            history = HistoricalDatasetStore(config.market_storage.resolve_root() / "history")
+            paths = tuple((history.root / "parquet").rglob("bars.parquet"))
+            bars = history.read_bars(paths) if paths else ()
+            result["report_root"] = str(
+                write_real_replay_reports(args.root, cases, commitments, bars)
+            )
+            result["outcome_rows"] = len(bars)
+        print(json.dumps(result, indent=2))
+        return 0
     market = MarketDataStore(session, config.market_storage.resolve_root())
     replay = ReplayEngine(session, market)
     runner = BenchmarkRunner(session, replay)

@@ -164,9 +164,34 @@ def migrated_engine(postgres_url: str):
         os.environ["MARKET_EVOLVER_DATABASE_URL"] = previous
 
 
-def test_migrations_reach_0020(migrated_engine) -> None:
+def test_migrations_reach_0021(migrated_engine) -> None:
     with migrated_engine.connect() as connection:
-        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0020"
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0021"
+
+
+@pytest.mark.postgres
+def test_real_replay_cases_commitments_and_append_only(migrated_engine) -> None:
+    from market_evolver.replay.real import (
+        SqlRealReplayRepository,
+        build_commitments,
+        curated_real_cases,
+    )
+    from market_evolver.storage.models import RealReplayCaseModel
+
+    cases = curated_real_cases()
+    commitments = build_commitments(cases, datetime(2026, 8, 12, tzinfo=UTC))
+    with Session(migrated_engine) as session:
+        repository = SqlRealReplayRepository(session)
+        assert sum(repository.add_case(case) for case in cases) == 7
+        assert sum(repository.add_commitment(item) for item in commitments) == 6
+        session.commit()
+        assert repository.counts() == (7, 6)
+        row = session.get(RealReplayCaseModel, cases[0].case_id)
+        assert row is not None
+        row.status = "MUTATED"
+        with pytest.raises(DBAPIError, match="immutable"):
+            session.commit()
+        session.rollback()
 
 
 def test_migration_idempotency_indexes_constraints_and_transaction_rollback(

@@ -28,7 +28,7 @@ def test_validation_rejects_critical_postgres_skips(monkeypatch, tmp_path: Path)
     monkeypatch.setattr("market_evolver.validation._postgres_ready", lambda url: (True, "db"))
     monkeypatch.setattr(
         "market_evolver.validation._migration_check",
-        lambda url, root, environment: ValidationCheck("migrations", "PASS", "mock", "head=0020"),
+        lambda url, root, environment: ValidationCheck("migrations", "PASS", "mock", "head=0021"),
     )
     report = validate_system(tmp_path)
     assert report.status == "FAIL" and "postgres" in report.failures
@@ -44,7 +44,7 @@ def test_validation_pass_requires_every_critical_suite(monkeypatch, tmp_path: Pa
     monkeypatch.setattr("market_evolver.validation._postgres_ready", lambda url: (True, "db"))
     monkeypatch.setattr(
         "market_evolver.validation._migration_check",
-        lambda url, root, environment: ValidationCheck("migrations", "PASS", "mock", "head=0020"),
+        lambda url, root, environment: ValidationCheck("migrations", "PASS", "mock", "head=0021"),
     )
     report = validate_system(tmp_path)
     assert report.status == "PASS" and report.failures == () and report.skips == ()

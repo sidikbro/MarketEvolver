@@ -14,5 +14,6 @@ coverage.xml
 htmlcov/
 data/live_validation/
 data/market/history/
+data/real_replay/
 *.session
 *.session-journal

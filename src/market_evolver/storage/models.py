@@ -903,6 +903,26 @@ class BenchmarkPairModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
+class RealReplayCaseModel(Base):
+    __tablename__ = "real_replay_cases"
+    case_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
+    selected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+class RealReplayCommitmentModel(Base):
+    __tablename__ = "real_replay_commitments"
+    commitment_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    case_id: Mapped[str] = mapped_column(
+        ForeignKey("real_replay_cases.case_id"), nullable=False, index=True
+    )
+    cutoff: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    mode: Mapped[str] = mapped_column(String(64), nullable=False)
+    committed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
 class MacroObservationModel(Base):
     __tablename__ = "macro_observations"
 
@@ -1854,6 +1874,8 @@ for _model in (
     ReplayRunModel,
     OutcomeEvaluationModel,
     BenchmarkPairModel,
+    RealReplayCaseModel,
+    RealReplayCommitmentModel,
     MacroObservationModel,
     TrendSignalModel,
     TrendDivergenceModel,
