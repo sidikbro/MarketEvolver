@@ -56,3 +56,7 @@ facts.
 Telegram validation is a separate command, configuration surface, and artifact
 subtree. It is never included implicitly in `validate-live`; follow the bounded
 workflow in [telegram-live-validation.md](telegram-live-validation.md).
+
+Real replay may consume bounded BOI SDMX history strictly as post-commit outcome
+measurement. SEC and CBS remain operator-optional; ambiguous current API facts
+are never promoted to vintage-safe historical inputs.

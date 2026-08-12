@@ -1,5 +1,10 @@
 # Research replay benchmark
 
+The original benchmark remains synthetic and deterministic. The v0.25
+real-case catalog is separate, retrospectively selected, and must not be pooled
+with synthetic metrics or called a protected evaluation set. Provider-dependent
+comparison metrics remain inconclusive without validated provider traces.
+
 Version 0.16 adds seven non-research baselines plus a false-rumor safety fixture
 comparing first social observation, independent corroboration, official
 confirmation, and no trade. Reports expose delay cost, false-positive exposure,

@@ -1,5 +1,10 @@
 # Historical research replay
 
+Version 0.25 adds a separate real-world catalog with selection audits and
+four-way temporal classification. Outcome-only prices are not exposed to
+research commitments. See [real-historical-replay.md](real-historical-replay.md)
+and [replay-case-selection.md](replay-case-selection.md).
+
 Historical price rows distinguish market time, retrieval time, and optional
 source record/revision time. A price can support deterministic outcome
 measurement without proving today's API representation was historically

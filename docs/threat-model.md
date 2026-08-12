@@ -289,3 +289,14 @@ confirmation; candidates remain unreviewed. Public accessibility does not prove
 publisher identity, claim truth, retention rights, or historical completeness,
 and operators remain responsible for per-source legal review and deletion of
 expired validation artifacts.
+
+# v0.25 real replay threats
+
+Retrospective selection, outcome leakage, revised-source leakage, present-day
+summary substitution, provider/pretraining knowledge, survivorship bias, and
+unavailable equity histories can make replay appear stronger than it is.
+Selection audits disclose known outcomes; role and temporal enums exclude
+outcome-only or ambiguous inputs; revision cutoffs and append-only commitments
+fail closed; provider-dependent results are not fabricated. These controls do
+not remove pretraining leakage or make seven development cases statistically
+meaningful.

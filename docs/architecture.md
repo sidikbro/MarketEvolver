@@ -32,6 +32,11 @@ narratives and rumors remain inside the untrusted research plane. Alembic
 revision `0020` preserves hashtags without changing authority or execution
 capabilities.
 
+Version 0.25 adds immutable real replay manifests and sealed comparison
+commitments. Alembic revision `0021` stores append-only case and commitment JSON
+while outcome datasets remain role-separated. Unusable cases preserve evidence
+gaps instead of reconstructing historical knowledge from current content.
+
 ## Scope and boundary
 
 MarketEvolver currently defines a research domain, not a trading system. The
