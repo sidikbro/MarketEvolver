@@ -23,7 +23,7 @@ the disposable values but tests do not load or require a committed `.env`.
 
 `make test-all` runs the offline suite and then the PostgreSQL suite. An absent
 database is an error for this target, never a successful skip. The PostgreSQL
-suite upgrades a clean database through Alembic `0021`, reruns `upgrade head`,
+suite upgrades a clean database through Alembic `0022`, reruns `upgrade head`,
 checks representative indexes and foreign keys, exercises transaction rollback,
 and verifies database-level append-only triggers.
 

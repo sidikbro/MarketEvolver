@@ -37,6 +37,11 @@ commitments. Alembic revision `0021` stores append-only case and commitment JSON
 while outcome datasets remain role-separated. Unusable cases preserve evidence
 gaps instead of reconstructing historical knowledge from current content.
 
+Version 0.26 adds an append-only archive plane before source-specific parsers.
+Alembic `0022` stores evidence vintages, completed scheduler manifests, and
+explicit coverage gaps. Raw artifacts remain content-addressed, and replay
+eligibility depends on availability proof rather than page dates.
+
 ## Scope and boundary
 
 MarketEvolver currently defines a research domain, not a trading system. The

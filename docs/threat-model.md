@@ -300,3 +300,14 @@ outcome-only or ambiguous inputs; revision cutoffs and append-only commitments
 fail closed; provider-dependent results are not fabricated. These controls do
 not remove pretraining leakage or make seven development cases statistically
 meaningful.
+
+# v0.26 archive threats
+
+Backdated local clocks, forged archive timestamps, mutable current pages,
+unauthorized archive scraping, overwritten snapshots, missing scheduled runs,
+and false revision lineage could create fictional historical knowledge. Local
+retrieval cannot predate observation; only direct observation or explicit
+official/trusted snapshot proof is eligible; content is addressed before use;
+revisions, runs, and gaps are append-only; present-day dates remain
+retrospective. Archive confidence does not establish claim truth, copyright
+permission, or complete coverage.

@@ -1,5 +1,16 @@
 # Data sources
 
+## Historical archive support (v0.26)
+
+BOI, BBC, SEC, and CBS have enabled archive job definitions, but adapters still
+require operator-reviewed configuration. Government, MAYA, geopolitical, and
+Telegram archive jobs remain disabled. SEC accession history is the preferred
+official proof when a compliant User-Agent is supplied. BOI current snapshots,
+statistical outcome series, and archived publications are never conflated. CBS
+current API responses are forward archives unless an official release vintage
+is independently proven. No archive source was contacted during v0.26
+implementation.
+
 ## Historical market data
 
 BOI SDMX `RER_USD_ILS` is the official bounded USD/ILS historical source. Stooq

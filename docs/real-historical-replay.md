@@ -56,3 +56,7 @@ The initial run therefore has one usable quiet control and six unusable event
 cases. This is an evidence-capture gap, not a reason to backdate observation
 timestamps. Future events become usable only after forward collection preserves
 their original vintages.
+
+Version 0.26 adds a backfill assessment for those six gaps. An eligible archive
+proof may support a new case version, but never rewrites v0.25. At initial
+release no historical vintage was recovered and no case was upgraded.

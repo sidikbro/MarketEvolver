@@ -60,3 +60,7 @@ workflow in [telegram-live-validation.md](telegram-live-validation.md).
 Real replay may consume bounded BOI SDMX history strictly as post-commit outcome
 measurement. SEC and CBS remain operator-optional; ambiguous current API facts
 are never promoted to vintage-safe historical inputs.
+
+Forward live validation can now feed the archive ledger. Its retrieval clock,
+server Date header, source publication time, raw bytes, and response metadata
+remain separate; only direct observation establishes `observed_live_at_time`.
