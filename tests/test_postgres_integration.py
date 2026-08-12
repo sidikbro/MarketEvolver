@@ -164,9 +164,9 @@ def migrated_engine(postgres_url: str):
         os.environ["MARKET_EVOLVER_DATABASE_URL"] = previous
 
 
-def test_migrations_reach_0019(migrated_engine) -> None:
+def test_migrations_reach_0020(migrated_engine) -> None:
     with migrated_engine.connect() as connection:
-        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0019"
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0020"
 
 
 def test_migration_idempotency_indexes_constraints_and_transaction_rollback(

@@ -1124,6 +1124,7 @@ class SocialPostModel(Base):
     raw_artifact_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     content_hash: Mapped[str] = mapped_column(String(71), nullable=False)
     media_references: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    hashtags: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     provenance: Mapped[list[str]] = mapped_column(JSON, nullable=False)
     revision_of: Mapped[str | None] = mapped_column(ForeignKey("social_posts.post_id"))
 

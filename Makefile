@@ -2,7 +2,7 @@ SHELL := /bin/bash
 COMPOSE := docker compose -f docker-compose.test.yml
 TEST_DATABASE_URL := postgresql+psycopg://marketevolver_test:marketevolver_test_only@127.0.0.1:55432/marketevolver_test
 
-.PHONY: postgres-up postgres-down test-offline test-postgres test-all validate validate-live
+.PHONY: postgres-up postgres-down test-offline test-postgres test-all validate validate-live validate-telegram-live
 
 postgres-up:
 	$(COMPOSE) up -d --wait postgres-test
@@ -25,3 +25,8 @@ validate-live: postgres-up
 	@test "$(LIVE)" = "YES" || (echo "Set LIVE=YES to explicitly permit bounded external requests"; exit 2)
 	MARKET_EVOLVER_DATABASE_URL=$(TEST_DATABASE_URL) .venv/bin/alembic upgrade head
 	MARKET_EVOLVER_TEST_POSTGRES_URL=$(TEST_DATABASE_URL) .venv/bin/market-evolver validate-live --confirm-live
+
+validate-telegram-live: postgres-up
+	@test "$(TELEGRAM_LIVE)" = "YES" || (echo "Set TELEGRAM_LIVE=YES to explicitly permit bounded Telegram requests"; exit 2)
+	MARKET_EVOLVER_DATABASE_URL=$(TEST_DATABASE_URL) .venv/bin/alembic upgrade head
+	MARKET_EVOLVER_TEST_POSTGRES_URL=$(TEST_DATABASE_URL) MARKET_EVOLVER_TELEGRAM_LIVE_VALIDATION=YES .venv/bin/market-evolver telegram live-validate --confirm-live

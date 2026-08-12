@@ -174,6 +174,7 @@ class TelegramRunner:
                     f"artifact:sha256:{artifact.sha256}",
                 ),
                 None if previous is None else previous.post_id,
+                message.hashtags,
             )
             repo.add_post(post)
             self.session.flush()

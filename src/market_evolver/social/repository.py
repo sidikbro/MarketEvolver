@@ -84,6 +84,7 @@ class SqlSocialRepository:
                 raw_artifact_sha256=x.raw_artifact_sha256,
                 content_hash=x.content_hash,
                 media_references=list(x.media_references),
+                hashtags=list(x.hashtags),
                 provenance=list(x.provenance),
                 revision_of=x.revision_of,
             )
@@ -326,6 +327,7 @@ class SqlSocialRepository:
             tuple(r.media_references),
             tuple(r.provenance),
             r.revision_of,
+            tuple(r.hashtags),
         )
 
     @staticmethod

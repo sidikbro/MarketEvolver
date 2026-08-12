@@ -354,6 +354,10 @@ def build_parser() -> argparse.ArgumentParser:
     telegram_backfill.add_argument("source_id")
     telegram_backfill.add_argument("--since", required=True)
     telegram_backfill.add_argument("--limit", type=int, default=100)
+    telegram_live = telegram_commands.add_parser("live-validate")
+    telegram_live.add_argument("--confirm-live", action="store_true")
+    telegram_live.add_argument("--root", type=Path, default=Path("data/live_validation/telegram"))
+    telegram_live.add_argument("--cleanup", action="store_true")
     fusion = commands.add_parser("fusion")
     fusion_commands = fusion.add_subparsers(dest="fusion_command", required=True)
     fusion_claim = fusion_commands.add_parser("claim")
@@ -505,6 +509,19 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.cleanup:
             harness.cleanup()
         return int(live_report.status is LiveStatus.FAILED)
+    if args.command == "telegram" and args.telegram_command == "live-validate":
+        from market_evolver.telegram.live_validation import (
+            TelegramValidationStatus,
+            run_live_validation_from_environment,
+        )
+
+        telegram_report, telegram_harness = run_live_validation_from_environment(
+            args.root, confirmed=args.confirm_live
+        )
+        print(telegram_report.json_text())
+        if args.cleanup and telegram_harness is not None:
+            telegram_harness.cleanup()
+        return int(telegram_report.status is TelegramValidationStatus.FAILED)
     if args.command == "market" and args.market_command == "source-list":
         print("il.boi.sdmx.exr\tauthoritative_official\tUSD/ILS only")
         print("global.stooq.experimental\tconvenience_experimental\tresearch only")

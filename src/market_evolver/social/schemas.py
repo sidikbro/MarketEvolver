@@ -133,6 +133,7 @@ class SocialPost:
     media_references: tuple[str, ...]
     provenance: tuple[str, ...]
     revision_of: str | None = None
+    hashtags: tuple[str, ...] = ()
     post_id: str = field(init=False)
     security_class: EvidenceSecurityClass = field(
         init=False, default=EvidenceSecurityClass.UNTRUSTED_UNSTRUCTURED
