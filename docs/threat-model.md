@@ -322,3 +322,13 @@ gated; external fields are explicitly provenance-deficient; comparison
 differences are surfaced; and incompatible protocols are `NON_EQUIVALENT`.
 These controls do not make external datasets contamination-free or reproduce a
 provider that is unavailable.
+
+# v0.28 provider execution threats
+
+Credential leakage, unbounded retries, provider response substitution,
+unpriced token usage, undeclared external patches, incomplete caches, memory
+carryover, and cherry-picked nondeterministic runs threaten validity. Keys stay
+environment-only; calls have size/time/retry limits and response hashes;
+patches require hashes and labels; three repeats are aggregated rather than
+selected; and absent prerequisites remain explicit blockers. Provider success
+still does not prove dataset comparability or contamination freedom.

@@ -30,3 +30,10 @@ historical visibility or eliminate contamination.
 The adapter is inspected and schema-testable, but the benchmark is not marked
 runnable until its dataset/provider environment and a complete fair-comparison
 manifest are operator-approved.
+
+The inspected checkout contains local cache files, but v0.28 does not accept
+their presence as proof of coverage or historical visibility. A reviewed
+dataset manifest with hashes, asset/date coverage, preprocessing, adjustment,
+and information-cutoff semantics is required. The native command is
+`python -m stockbench.apps.run_backtest` with pinned config, date range, and
+DeepSeek profile. Expected outputs are reports and logs under `storage/`.

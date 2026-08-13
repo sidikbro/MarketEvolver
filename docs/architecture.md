@@ -48,6 +48,11 @@ configuration, and fair-comparison manifests prevent incompatible protocols
 from being presented as winner/loser results. External inputs never acquire
 native provenance merely by passing through an adapter.
 
+Version 0.28 adds immutable provider execution profiles and environment
+manifests. Live validation is separately marked and bounded; absent credentials
+or dataset proofs produce blocker records, never synthetic benchmark outcomes.
+Usage and fairness accounting are first-class inputs to any comparison.
+
 ## Scope and boundary
 
 MarketEvolver currently defines a research domain, not a trading system. The

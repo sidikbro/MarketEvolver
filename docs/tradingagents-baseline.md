@@ -25,3 +25,9 @@ declared. A current provider snapshot is not evidence that data was visible on a
 historical analysis date. Historical company names may leak through pretraining,
 and claims about verified snapshots need independent provenance review.
 TradingAgents is inspected but not runnable or evaluated in MarketEvolver v0.27.
+
+In v0.28 the prepared native command is `tradingagents analyze --ticker <asset>
+--date <date>`. Required artifacts are a cutoff-safe OHLCV snapshot,
+news/fundamental snapshots, exact configuration, decision and portfolio paths,
+and a reset/declared memory state. The local environment lacks its dependencies
+and no verified dataset manifest or provider credential was available.

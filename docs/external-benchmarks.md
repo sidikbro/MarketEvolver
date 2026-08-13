@@ -48,3 +48,9 @@ KTD-Fin requires future verification of its repository and license plus
 identifier/calendar masking and return-attribution decomposition. Live arena
 work requires a separate legal, provider, execution, and safety review; it is
 not a route to live trading in MarketEvolver.
+
+Version 0.28 adds immutable provider/environment profiles, bounded DeepSeek
+validation, actual token/latency/cost accounting, repeated-run aggregation, and
+explicit execution blockers. See [the v0.28 result](results/external-benchmark-v028.md):
+credentials and verified datasets were unavailable, so no performance result
+was generated.
