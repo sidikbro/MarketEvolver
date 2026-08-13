@@ -311,3 +311,14 @@ official/trusted snapshot proof is eligible; content is addressed before use;
 revisions, runs, and gaps are append-only; present-day dates remain
 retrospective. Archive confidence does not establish claim truth, copyright
 permission, or complete coverage.
+
+# v0.27 external benchmark threats
+
+Moving Git heads, dirty sibling repositories, dependency drift, undeclared
+costs, mismatched periods, provider-data leakage, persistent agent memory,
+historical-name memorization, and selective metric reporting can create false
+comparisons. Exact SHA and file hashes are mandatory; execution is operator
+gated; external fields are explicitly provenance-deficient; comparison
+differences are surfaced; and incompatible protocols are `NON_EQUIVALENT`.
+These controls do not make external datasets contamination-free or reproduce a
+provider that is unavailable.

@@ -42,6 +42,12 @@ Alembic `0022` stores evidence vintages, completed scheduler manifests, and
 explicit coverage gaps. Raw artifacts remain content-addressed, and replay
 eligibility depends on availability proof rather than page dates.
 
+Version 0.27 adds a read-only external benchmark boundary. Registry definitions
+pin sibling repositories, inspection manifests hash their environment and
+configuration, and fair-comparison manifests prevent incompatible protocols
+from being presented as winner/loser results. External inputs never acquire
+native provenance merely by passing through an adapter.
+
 ## Scope and boundary
 
 MarketEvolver currently defines a research domain, not a trading system. The
