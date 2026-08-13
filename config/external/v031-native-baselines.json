@@ -1,0 +1,45 @@
+{
+  "schema_version": "v0.31",
+  "comparison_classes": {
+    "stockbench_native": "NATIVE_ONLY",
+    "tradingagents_native": "NATIVE_ONLY",
+    "controlled_comparisons": "NON_EQUIVALENT",
+    "marketevolver": "GOVERNED_REFERENCE"
+  },
+  "external_repositories": {
+    "stockbench": "ce8b2b3483590646ad3b650ac8221f43f76fd091",
+    "tradingagents": "a33fd4c0f134485a43553a2c23a63cb14adbd88f"
+  },
+  "provider": {
+    "name": "DeepSeek",
+    "model": "deepseek-v4-flash",
+    "pricing": {
+      "input_per_million_usd": "0.14",
+      "output_per_million_usd": "0.28"
+    }
+  },
+  "per_system_limit": {
+    "maximum_calls": 100,
+    "maximum_input_tokens": 250000,
+    "maximum_output_tokens": 100000,
+    "maximum_estimated_cost_usd": "0.25",
+    "maximum_wall_seconds": 900
+  },
+  "stockbench": {
+    "environment_compatibility": "Typer 0.12.5 with Click 8.1.8",
+    "source_patch": false,
+    "historical_vintage_proof": false,
+    "native_configured_model": "deepseek-v3.1-250821",
+    "runtime_override_supported": true
+  },
+  "tradingagents": {
+    "bundled_dataset": false,
+    "dynamic_input_observation_required": true,
+    "historical_vintage_proof": false
+  },
+  "runs": [
+    {"system": "stockbench", "artifact": "config/external/v031-runs/stockbench-native-r1.json", "status": "SINGLE_RUN_INFRASTRUCTURE_VALIDATION"},
+    {"system": "tradingagents", "artifact": "config/external/v031-runs/tradingagents-native-r1.json", "status": "FAILED_EXTERNAL"},
+    {"system": "marketevolver", "artifact": "config/external/v031-runs/marketevolver-governed-reference.json", "status": "BLOCKED"}
+  ]
+}

@@ -224,8 +224,12 @@ def test_provider_profile_and_blocked_validation(monkeypatch) -> None:
 @pytest.mark.unit
 def test_deepseek_validation_accounts_for_bounded_structured_response() -> None:
     class Response:
-        def __init__(self) -> None:
-            self.headers = {"x-request-id": "request-fixture"}
+        def __init__(self, body, *, request_id=None) -> None:
+            self.status = 200
+            self.headers = {"Content-Type": "application/json"}
+            if request_id:
+                self.headers["x-request-id"] = request_id
+            self.body = json.dumps(body).encode()
 
         def __enter__(self):
             return self
@@ -235,24 +239,33 @@ def test_deepseek_validation_accounts_for_bounded_structured_response() -> None:
 
         def read(self, limit):
             assert limit == 1_000_001
-            return json.dumps(
-                {
-                    "id": "completion-fixture",
-                    "model": "deepseek-v4-flash-202608",
-                    "system_fingerprint": "fp-fixture",
-                    "choices": [{"message": {"content": '{"ok":true}'}}],
-                    "usage": {"prompt_tokens": 5, "completion_tokens": 3},
-                }
-            ).encode()
+            return self.body
+
+    def open_fixture(request, **kwargs):
+        if request.full_url.endswith("/models"):
+            return Response({"object": "list", "data": [{"id": "deepseek-chat"}]})
+        request_body = json.loads(request.data)
+        assert request_body["model"] == "deepseek-chat"
+        assert request_body["max_tokens"] == 128
+        return Response(
+            {
+                "id": "completion-fixture",
+                "model": "deepseek-chat",
+                "system_fingerprint": "fp-fixture",
+                "choices": [{"message": {"content": '{"ok":true}'}}],
+                "usage": {"prompt_tokens": 5, "completion_tokens": 3},
+            },
+            request_id="request-fixture",
+        )
 
     provider = DeepSeekProvider(
-        api_key="fixture-not-a-secret", opener=lambda *args, **kwargs: Response()
+        api_key="fixture-not-a-secret", opener=open_fixture
     )
     result = provider.validate()
     assert result.status is ExecutionStatus.PASS
     assert result.input_tokens == 5 and result.output_tokens == 3
     assert result.provider_request_id == "request-fixture"
-    assert result.returned_model_id == "deepseek-v4-flash-202608"
+    assert result.returned_model_id == "deepseek-chat"
     assert ("system_fingerprint", "fp-fixture") in result.response_metadata
 
 

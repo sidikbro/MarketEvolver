@@ -1,0 +1,150 @@
+{
+  "agent_configuration": {
+    "effective_mode": "dual",
+    "requested_mode": "single",
+    "summary_effective": true,
+    "summary_requested": false
+  },
+  "architecture_complexity": {
+    "active_agents": 3,
+    "calls_per_decision": 3,
+    "latency_per_decision_ms": 84360,
+    "llm_calls": 3,
+    "provider_cost_per_decision_usd": "0.003160",
+    "tokens_per_decision": 14471,
+    "tool_data_calls": 1802
+  },
+  "benchmark_id": "stockbench",
+  "comparison_class": "NATIVE_ONLY",
+  "configuration_hash": "592b5c65eb2ab733a73ebc1910c11cbb4ef2f2579fe35a3506bab7a0a335d95b",
+  "consumed_cache_manifest": "stockbench-consumed-cache-r1.json",
+  "consumed_file_count": 1802,
+  "controlled_comparison_class": "NON_EQUIVALENT",
+  "decision": "HOLD",
+  "environment_hash": "4e1ae10b1532e3d84ed241ada708ffda4f575b4088b9d0c7b846f7851eae0683",
+  "external_sha": "ce8b2b3483590646ad3b650ac8221f43f76fd091",
+  "failures": [
+    "requested single mode fell back to dual",
+    "decision response exhausted 4096 tokens with empty visible content",
+    "empty decision was filtered and produced HOLD",
+    "summary LLM ran despite no-summary request"
+  ],
+  "financial_metrics": {
+    "benchmark_return": "NOT_AVAILABLE",
+    "cumulative_return": 0.0,
+    "excess_return": "NOT_AVAILABLE",
+    "max_drawdown": 0.0,
+    "sharpe": 0.0,
+    "sortino": 0.0,
+    "trade_count": 0,
+    "transaction_costs": 0.0,
+    "turnover": 0.0,
+    "volatility": "NOT_AVAILABLE"
+  },
+  "finished_at": "2026-08-13T11:49:37+00:00",
+  "historical_vintage_proof": false,
+  "market_evolver_source_sha": "c2d73ee",
+  "model": "deepseek-v4-flash",
+  "native_model_difference": "checked-in profile names deepseek-v3.1-250821; supported runtime profile override used",
+  "network_domains": [
+    "api.deepseek.com"
+  ],
+  "outputs": [
+    {
+      "path": "conclusion.md",
+      "sha256": "637ac69a9b31499a4e0f37fd422bd157fb1cf29eebcb6c33ed5c945e12e21a99",
+      "size": 3114
+    },
+    {
+      "path": "daily_nav.parquet",
+      "sha256": "74a049e9fc3090d16cec3837f4d1f8b831342df8a013808ff8372f295d52c553",
+      "size": 2044
+    },
+    {
+      "path": "meta.json",
+      "sha256": "9d7b8fe89ba21dbdb695142aea048f188ebe0e97d5600e5cd071044507cf8a20",
+      "size": 164
+    },
+    {
+      "path": "metrics.json",
+      "sha256": "cbee66ff348a427fec5bc2efe094286f36f9c87a59b854e8b0135f5463376088",
+      "size": 203
+    },
+    {
+      "path": "metrics_summary.csv",
+      "sha256": "a962032a624a49e464e137a0b6c0e8a1b2cbd4c17e025262506953e08ab6baa3",
+      "size": 266
+    },
+    {
+      "path": "nl_summary.txt",
+      "sha256": "d93520fc9573c7fc04dde796e9f0cb09accec41c0d87a14fd742132db92733fd",
+      "size": 1855
+    },
+    {
+      "path": "per_symbol_benchmark/aggregated_cumreturn_analysis.png",
+      "sha256": "db46077228598d0f2600696b77926ed5c81ecbf3e9b83dc2cd02290a3444d820",
+      "size": 167578
+    },
+    {
+      "path": "per_symbol_benchmark/benchmark_comparisons/strategy_vs_simple_avg/nav_comparison.png",
+      "sha256": "552410b05a3ee727c63f4060378b989db3cf6d5bae8e148a4f970dcdf22e0d47",
+      "size": 216456
+    },
+    {
+      "path": "per_symbol_benchmark/benchmark_comparisons/strategy_vs_simple_avg/totalassets_comparison.png",
+      "sha256": "d1085e13678034ae02a75815f5619a23c3791a2013acb3f41ce6ab198f4bed82",
+      "size": 192813
+    },
+    {
+      "path": "per_symbol_benchmark/benchmark_comparisons/strategy_vs_weighted_avg/nav_comparison.png",
+      "sha256": "a32185df936829b27c387259aa31d280c44f5cf391920295084b9f43db379439",
+      "size": 223037
+    },
+    {
+      "path": "per_symbol_benchmark/benchmark_comparisons/strategy_vs_weighted_avg/totalassets_comparison.png",
+      "sha256": "c44af28acb668737f937844391c1a65d232abb9747d390fcfb1d7c64ac3f8259",
+      "size": 198759
+    },
+    {
+      "path": "per_symbol_benchmark/individual_stocks/AAPL_metrics.png",
+      "sha256": "b986b1f281da9888d376198098de890846b0fa39cb1e0b63ed06c73becacf4d5",
+      "size": 22784
+    },
+    {
+      "path": "per_symbol_benchmark/individual_stocks/README.md",
+      "sha256": "1bcaa1df25334895560b722c0439028e38ba777a0bfed21f5601fec4fffe3e7d",
+      "size": 492
+    },
+    {
+      "path": "per_symbol_benchmark/per_symbol_benchmark_nav.parquet",
+      "sha256": "004e982bc81e78c15c87db89bdfefd1d3aa4ab9b45b9fb6b56818515070d8f7e",
+      "size": 2048
+    },
+    {
+      "path": "per_symbol_benchmark/stock_price_trends.png",
+      "sha256": "0f8723cacde1a2845a171b9fb50677e0106819b5bd3dea2cb5af5f01a7d95e6d",
+      "size": 203769
+    },
+    {
+      "path": "summary.txt",
+      "sha256": "a1b886110c4b149098352f631eb5b8f3f4cc407829d628de91093f3257ae837c",
+      "size": 3176
+    },
+    {
+      "path": "trades.parquet",
+      "sha256": "597b842d10b696e2225dd3d9d3636fddeb3569e4e14b1e21794433e5e2a72dd0",
+      "size": 1012
+    }
+  ],
+  "provider": "DeepSeek",
+  "provider_usage": {
+    "calls": 3,
+    "estimated_cost_usd": "0.003160",
+    "input_tokens": 6362,
+    "latency_ms": 84360,
+    "output_tokens": 8109
+  },
+  "result_label": "SINGLE_RUN_INFRASTRUCTURE_VALIDATION",
+  "schema_version": "v0.31",
+  "started_at": "2026-08-13T11:48:00+00:00"
+}

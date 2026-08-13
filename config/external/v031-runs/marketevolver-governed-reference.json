@@ -1,0 +1,21 @@
+{
+  "benchmark_id": "marketevolver-governed-reference",
+  "comparison_class": "GOVERNED_REFERENCE",
+  "executions": 0,
+  "model": "deepseek-v4-flash",
+  "modes": [
+    "generalist",
+    "specialist",
+    "specialist_skeptical_reviewer"
+  ],
+  "provider": "DeepSeek",
+  "provider_usage": {
+    "calls": 0,
+    "estimated_cost_usd": "0",
+    "input_tokens": 0,
+    "output_tokens": 0
+  },
+  "reason": "No eligible retained point-in-time evidence set is available for these modes; retrospective external data cannot be substituted without weakening MarketEvolver provenance rules.",
+  "result_label": "BLOCKED",
+  "schema_version": "v0.31"
+}

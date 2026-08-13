@@ -1,0 +1,162 @@
+{
+  "agent_configuration": {
+    "architecture_altered": false,
+    "debate_rounds": 1,
+    "risk_rounds": 1,
+    "selected_analysts": [
+      "market"
+    ]
+  },
+  "architecture_complexity": {
+    "active_agents": "native graph; exact executed count unavailable",
+    "calls_per_decision": "NOT_AVAILABLE",
+    "latency_per_decision_ms": "NOT_AVAILABLE",
+    "llm_calls": 10,
+    "provider_cost_per_decision_usd": "NOT_AVAILABLE",
+    "tokens_per_decision": "NOT_AVAILABLE",
+    "tool_data_calls": 1
+  },
+  "benchmark_id": "tradingagents",
+  "comparison_class": "NATIVE_ONLY",
+  "controlled_comparison_class": "NON_EQUIVALENT",
+  "decision": "NOT_AVAILABLE",
+  "dynamic_inputs": [
+    {
+      "category": "provider",
+      "domain": "api.deepseek.com",
+      "requested_at": "2026-08-13T11:51:12.874344+00:00",
+      "requested_range": "2025-04-03",
+      "response_sha256": "6b91409d5df983a480cba0214f22df769f9d5c861025dee33824fef776d252e5",
+      "response_size": 3773,
+      "ticker": "AAPL"
+    },
+    {
+      "category": "provider",
+      "domain": "api.deepseek.com",
+      "requested_at": "2026-08-13T11:51:20.412092+00:00",
+      "requested_range": "2025-04-03",
+      "response_sha256": "fcb0ea8fb91fdcabd73d9f8c6106519f2508b75f4f2c16e54ec21e3599df1a85",
+      "response_size": 3598,
+      "ticker": "AAPL"
+    },
+    {
+      "category": "provider",
+      "domain": "api.deepseek.com",
+      "requested_at": "2026-08-13T11:52:24.018207+00:00",
+      "requested_range": "2025-04-03",
+      "response_sha256": "e8297509a099d7148d1703f042aed3d4b019dbd4f0f81938327fff08d7e9434d",
+      "response_size": 23449,
+      "ticker": "AAPL"
+    },
+    {
+      "category": "provider",
+      "domain": "api.deepseek.com",
+      "requested_at": "2026-08-13T11:54:22.577619+00:00",
+      "requested_range": "2025-04-03",
+      "response_sha256": "b7fd35ab14473af2cc1f44b424269a79dc8c628d84abb74f2bc06f2a7274002f",
+      "response_size": 41070,
+      "ticker": "AAPL"
+    },
+    {
+      "category": "provider",
+      "domain": "api.deepseek.com",
+      "requested_at": "2026-08-13T11:56:04.648617+00:00",
+      "requested_range": "2025-04-03",
+      "response_sha256": "9e3d66ec5178b0c4115a17b945f8ba9f2d6a923aab51fa673ae44f0b12a0edf8",
+      "response_size": 36195,
+      "ticker": "AAPL"
+    },
+    {
+      "category": "provider",
+      "domain": "api.deepseek.com",
+      "requested_at": "2026-08-13T11:56:46.418404+00:00",
+      "requested_range": "2025-04-03",
+      "response_sha256": "990ac997748f39ac4eb4da2f904575ec47df67c8afcfbe608a4d338d43b7af35",
+      "response_size": 20225,
+      "ticker": "AAPL"
+    },
+    {
+      "category": "provider",
+      "domain": "api.deepseek.com",
+      "requested_at": "2026-08-13T11:57:04.456429+00:00",
+      "requested_range": "2025-04-03",
+      "response_sha256": "17912ad2b9650c0aaaccdf1958f307ff010f1b858a32bbcc473277278c5bc778",
+      "response_size": 9229,
+      "ticker": "AAPL"
+    },
+    {
+      "category": "provider",
+      "domain": "api.deepseek.com",
+      "requested_at": "2026-08-13T11:57:45.106178+00:00",
+      "requested_range": "2025-04-03",
+      "response_sha256": "161700c124472faa65ba1a2d83e249addd5c40ee3f69fcfd56b14bacaa95d07f",
+      "response_size": 15013,
+      "ticker": "AAPL"
+    },
+    {
+      "category": "provider",
+      "domain": "api.deepseek.com",
+      "requested_at": "2026-08-13T11:59:34.355076+00:00",
+      "requested_range": "2025-04-03",
+      "response_sha256": "b11eabd52a0691542cd95c6d69c547df7e9611417170a1ac0fee7987da1f7610",
+      "response_size": 41030,
+      "ticker": "AAPL"
+    },
+    {
+      "category": "provider",
+      "domain": "api.deepseek.com",
+      "requested_at": "2026-08-13T12:00:54.336149+00:00",
+      "requested_range": "2025-04-03",
+      "response_sha256": "7ea0e7d6b0de561fe11ce5d3e047eb97af8b86798489d3fcb35a9f9ad60b7383",
+      "response_size": 31198,
+      "ticker": "AAPL"
+    }
+  ],
+  "environment_hash": "fc427ccc2e1a9710985345a06929887bd19a804e2586f315ad47435fae3b87ec",
+  "external_sha": "a33fd4c0f134485a43553a2c23a63cb14adbd88f",
+  "failures": [
+    "run ended before producing a decision envelope",
+    "native provider usage was not exposed and is unpriced",
+    "transport-level Yahoo response hash unavailable; resulting cache snapshot hash retained",
+    "cost guard failed closed; no retry or repeats"
+  ],
+  "financial_metrics": {
+    "benchmark_return": "NOT_AVAILABLE",
+    "cumulative_return": "NOT_AVAILABLE",
+    "excess_return": "NOT_AVAILABLE",
+    "max_drawdown": "NOT_AVAILABLE",
+    "sharpe": "NOT_AVAILABLE",
+    "sortino": "NOT_AVAILABLE",
+    "trade_count": "NOT_AVAILABLE",
+    "transaction_costs": "NOT_AVAILABLE",
+    "turnover": "NOT_AVAILABLE",
+    "volatility": "NOT_AVAILABLE"
+  },
+  "finished_at": "2026-08-13T12:00:54.336149+00:00",
+  "market_evolver_source_sha": "c2d73ee",
+  "model": "deepseek-v4-flash",
+  "network_domain_evidence": {
+    "api.deepseek.com": "Python hostname observer",
+    "query2.finance.yahoo.com": "native yfinance implementation plus traced Yahoo TLS endpoints"
+  },
+  "network_domains": [
+    "api.deepseek.com",
+    "query2.finance.yahoo.com"
+  ],
+  "provider": "DeepSeek",
+  "provider_usage": {
+    "calls": 10,
+    "estimated_cost_usd": "NOT_AVAILABLE",
+    "input_tokens": "NOT_AVAILABLE",
+    "output_tokens": "NOT_AVAILABLE"
+  },
+  "result_label": "FAILED_EXTERNAL",
+  "runtime_cache": {
+    "historical_vintage_proof": false,
+    "path": "AAPL-YFin-data-2021-08-13-2026-08-14.csv",
+    "sha256": "8f6ac6f813c30142bfe575b40f447f07f3fe3134c5e8779b75ad133532468f29",
+    "size": 118408
+  },
+  "schema_version": "v0.31",
+  "started_at": "2026-08-13T11:51:12.874344+00:00"
+}

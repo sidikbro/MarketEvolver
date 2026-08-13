@@ -109,7 +109,7 @@ class ProviderExecutionProfile:
 class ProviderValidationResult:
     profile_id: str
     status: ExecutionStatus
-    authenticated: bool
+    authenticated: bool | None
     reachable: bool
     model_available: bool
     structured_response: bool
@@ -122,6 +122,11 @@ class ProviderValidationResult:
     response_metadata: tuple[tuple[str, str], ...]
     error_summary: str | None
     validated_at: datetime
+    failure_category: str | None = None
+    http_status: int | None = None
+    content_type: str | None = None
+    sanitized_response_preview: str | None = None
+    estimated_cost: str | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -129,6 +134,12 @@ class ProviderValidationResult:
         )
         if min(self.input_tokens, self.output_tokens, self.latency_ms) < 0:
             raise ValidationError("provider accounting cannot be negative")
+        if self.http_status is not None and not 100 <= self.http_status <= 599:
+            raise ValidationError("invalid provider HTTP status")
+        if self.sanitized_response_preview is not None and len(
+            self.sanitized_response_preview
+        ) > 256:
+            raise ValidationError("provider response preview is not bounded")
 
 
 @dataclass(frozen=True, slots=True)
