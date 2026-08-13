@@ -237,6 +237,9 @@ def test_deepseek_validation_accounts_for_bounded_structured_response() -> None:
             assert limit == 1_000_001
             return json.dumps(
                 {
+                    "id": "completion-fixture",
+                    "model": "deepseek-v4-flash-202608",
+                    "system_fingerprint": "fp-fixture",
                     "choices": [{"message": {"content": '{"ok":true}'}}],
                     "usage": {"prompt_tokens": 5, "completion_tokens": 3},
                 }
@@ -249,6 +252,8 @@ def test_deepseek_validation_accounts_for_bounded_structured_response() -> None:
     assert result.status is ExecutionStatus.PASS
     assert result.input_tokens == 5 and result.output_tokens == 3
     assert result.provider_request_id == "request-fixture"
+    assert result.returned_model_id == "deepseek-v4-flash-202608"
+    assert ("system_fingerprint", "fp-fixture") in result.response_metadata
 
 
 @pytest.mark.unit

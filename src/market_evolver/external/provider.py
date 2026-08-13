@@ -126,6 +126,8 @@ class DeepSeekProvider:
                 0,
                 None,
                 None,
+                None,
+                (),
                 "DEEPSEEK_API_KEY is absent",
                 now,
             )
@@ -142,6 +144,12 @@ class DeepSeekProvider:
             document = json.loads(raw)
             content = json.loads(document["choices"][0]["message"]["content"])
             usage = document.get("usage", {})
+            returned_model = document.get("model")
+            response_metadata = tuple(
+                (key, str(document[key]))
+                for key in ("id", "system_fingerprint", "object")
+                if document.get(key) is not None
+            )
             structured = content == {"ok": True}
             status = ExecutionStatus.PASS if structured else ExecutionStatus.FAILED_EXTERNAL
             return ProviderValidationResult(
@@ -156,6 +164,8 @@ class DeepSeekProvider:
                 round((time.monotonic() - started) * 1000),
                 f"sha256:{hashlib.sha256(raw).hexdigest()}",
                 request_id,
+                returned_model if isinstance(returned_model, str) else None,
+                response_metadata,
                 None if structured else "provider did not return required structured response",
                 self._clock(),
             )
@@ -172,6 +182,8 @@ class DeepSeekProvider:
                 round((time.monotonic() - started) * 1000),
                 None,
                 None,
+                None,
+                (),
                 type(exc).__name__,
                 self._clock(),
             )

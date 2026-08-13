@@ -317,6 +317,9 @@ def build_parser() -> argparse.ArgumentParser:
     external_report.add_argument("right", type=Path)
     external_prepare = external_commands.add_parser("prepare")
     external_prepare.add_argument("benchmark_id", choices=("stockbench", "tradingagents"))
+    external_commands.add_parser("data-audit")
+    external_commands.add_parser("network-manifest")
+    external_commands.add_parser("readiness")
     provider = commands.add_parser("provider")
     provider_commands = provider.add_subparsers(dest="provider_command", required=True)
     provider_validate = provider_commands.add_parser("validate")
@@ -1972,6 +1975,29 @@ def _external_command(args: argparse.Namespace) -> int:
         )
         return 0
     project_root = Path.cwd()
+    if args.external_command in {"data-audit", "network-manifest", "readiness"}:
+        from market_evolver.external.bringup import (
+            MINIMAL_LIVE_COST_LIMIT,
+            benchmark_decisions,
+            network_manifests,
+            readiness_matrix,
+            stockbench_dataset_audit,
+        )
+
+        output: object
+        if args.external_command == "data-audit":
+            output = asdict(stockbench_dataset_audit(project_root / "../StockBench/storage/cache"))
+        elif args.external_command == "network-manifest":
+            output = [asdict(item) for item in network_manifests()]
+        else:
+            available = bool(os.environ.get("DEEPSEEK_API_KEY"))
+            output = {
+                "matrix": [asdict(item) for item in readiness_matrix(available)],
+                "decisions": benchmark_decisions(available),
+                "minimal_live_cost_limit": asdict(MINIMAL_LIVE_COST_LIMIT),
+            }
+        print(json.dumps(output, default=str, indent=2))
+        return 0
     if args.external_command == "prepare":
         from market_evolver.external.execution import prepare_environment
 

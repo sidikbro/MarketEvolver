@@ -38,6 +38,29 @@ class EndpointClass(str, Enum):
     OPENAI_COMPATIBLE_CHAT = "openai_compatible_chat"
 
 
+class DatasetClassification(str, Enum):
+    RUNNABLE_NATIVE = "RUNNABLE_NATIVE"
+    RUNNABLE_NON_CAUSAL = "RUNNABLE_NON_CAUSAL"
+    BLOCKED_DATASET = "BLOCKED_DATASET"
+    PARTIALLY_REPRODUCIBLE = "PARTIALLY_REPRODUCIBLE"
+
+
+class ReadinessState(str, Enum):
+    READY = "READY"
+    MISMATCH = "MISMATCH"
+    UNKNOWN = "UNKNOWN"
+    BLOCKED = "BLOCKED"
+
+
+class BenchmarkDecision(str, Enum):
+    READY_EXACT = "READY_EXACT"
+    READY_PARTIAL = "READY_PARTIAL"
+    BLOCKED_PROVIDER = "BLOCKED_PROVIDER"
+    BLOCKED_DATASET = "BLOCKED_DATASET"
+    BLOCKED_DEPENDENCY = "BLOCKED_DEPENDENCY"
+    NON_EQUIVALENT = "NON_EQUIVALENT"
+
+
 class ComparisonMode(str, Enum):
     NATIVE_REFERENCE = "stockbench_native_reference"
     GENERALIST = "marketevolver_generalist"
@@ -95,6 +118,8 @@ class ProviderValidationResult:
     latency_ms: int
     raw_response_hash: str | None
     provider_request_id: str | None
+    returned_model_id: str | None
+    response_metadata: tuple[tuple[str, str], ...]
     error_summary: str | None
     validated_at: datetime
 
@@ -165,6 +190,93 @@ class ExternalEnvironmentManifest:
         if not all((self.benchmark_id, self.repository_manifest_id, self.provider_profile_id)):
             raise ValidationError("external environment manifest is incomplete")
         object.__setattr__(self, "manifest_id", content_id("external-environment", self))
+
+
+@dataclass(frozen=True, slots=True)
+class EnvironmentSetupManifest:
+    benchmark_id: str
+    external_git_sha: str
+    python_version: str
+    pip_freeze_hash: str
+    dependency_manifest_path: str
+    dependency_manifest_hash: str
+    platform: str
+    setup_at: datetime
+    install_command: tuple[str, ...]
+    install_succeeded: bool
+    smoke_outcome: str
+    manifest_id: str = field(init=False)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "setup_at", require_aware_utc(self.setup_at, "setup_at"))
+        for value in (self.pip_freeze_hash, self.dependency_manifest_hash):
+            if fullmatch(r"[0-9a-f]{64}", value) is None:
+                raise ValidationError("environment setup requires SHA-256 hashes")
+        if fullmatch(r"[0-9a-f]{40}", self.external_git_sha) is None:
+            raise ValidationError("environment setup requires exact external SHA")
+        if not all((self.benchmark_id, self.python_version, self.platform, self.install_command)):
+            raise ValidationError("environment setup manifest is incomplete")
+        object.__setattr__(self, "manifest_id", content_id("environment-setup", self))
+
+
+@dataclass(frozen=True, slots=True)
+class NetworkDomainManifest:
+    benchmark_id: str
+    domains: tuple[str, ...]
+    credential_variables: tuple[str, ...]
+    download_classes: tuple[str, ...]
+    broad_network_allowed: bool = False
+
+    def __post_init__(self) -> None:
+        if self.broad_network_allowed or not self.benchmark_id:
+            raise ValidationError("external benchmark network must remain allowlisted")
+        if any("/" in domain or ":" in domain for domain in self.domains):
+            raise ValidationError("network manifest entries must be bare domains")
+
+
+@dataclass(frozen=True, slots=True)
+class DatasetAudit:
+    benchmark_id: str
+    classification: DatasetClassification
+    file_count: int
+    assets: tuple[str, ...]
+    period_start: str | None
+    period_end: str | None
+    schemas: tuple[str, ...]
+    provenance_metadata: tuple[str, ...]
+    information_timestamps: bool
+    limitations: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        if self.file_count < 0 or not self.limitations:
+            raise ValidationError("dataset audit requires counts and limitations")
+
+
+@dataclass(frozen=True, slots=True)
+class ProviderCostLimit:
+    maximum_calls: int
+    maximum_input_tokens: int
+    maximum_output_tokens: int
+    maximum_estimated_cost: str
+
+    def __post_init__(self) -> None:
+        if min(self.maximum_calls, self.maximum_input_tokens, self.maximum_output_tokens) < 1:
+            raise ValidationError("provider guard limits must be positive")
+        if float(self.maximum_estimated_cost) <= 0:
+            raise ValidationError("provider cost limit must be positive")
+
+
+@dataclass(frozen=True, slots=True)
+class ReadinessRow:
+    dimension: str
+    market_evolver: ReadinessState
+    stockbench: ReadinessState
+    tradingagents: ReadinessState
+    rationale: str
+
+    def __post_init__(self) -> None:
+        if not self.dimension or not self.rationale:
+            raise ValidationError("readiness row requires dimension and rationale")
 
 
 @dataclass(frozen=True, slots=True)
