@@ -1,0 +1,13 @@
+{
+  "schema_version": "v0.30",
+  "repository_sha": "a33fd4c0f134485a43553a2c23a63cb14adbd88f",
+  "bundled_datasets": false,
+  "inputs": [
+    {"name": "market_prices", "implementations": ["yfinance", "alpha_vantage"], "classification": "provider_managed", "temporal_limit": "retrieval vintage not preserved"},
+    {"name": "fundamentals", "implementations": ["yfinance", "alpha_vantage"], "classification": "current_snapshot", "temporal_limit": "later statements and restatements may be visible"},
+    {"name": "news", "implementations": ["yfinance", "alpha_vantage"], "classification": "temporally_ambiguous", "temporal_limit": "publication time does not prove historical visibility or edit state"},
+    {"name": "sentiment_social", "implementations": ["reddit", "stocktwits"], "classification": "current_snapshot", "temporal_limit": "live public feeds"},
+    {"name": "technical_indicators", "implementations": ["yfinance-derived", "alpha_vantage"], "classification": "provider_managed", "temporal_limit": "underlying retrieval vintage not manifested"}
+  ],
+  "domains": ["api.deepseek.com", "query1.finance.yahoo.com", "query2.finance.yahoo.com", "fc.yahoo.com", "www.alphavantage.co", "api.stlouisfed.org", "gamma-api.polymarket.com", "www.reddit.com", "api.stocktwits.com"]
+}

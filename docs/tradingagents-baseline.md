@@ -38,3 +38,12 @@ selected native signal/date tests. The repository's `requirements.txt` is only
 sibling project and its development extra. DeepSeek V4 Flash is in the model
 catalog, but the historical data paths do not prove an information-time
 vintage. The comparison remains `BLOCKED_DATASET` after provider access returns.
+
+Version 0.30 traces each input path in
+`config/external/v030-tradingagents-data.json`. No evaluated dataset is bundled.
+Prices and technical indicators are provider-managed without retrieval-vintage
+proof; fundamentals are current snapshots; news is temporally ambiguous; and
+Reddit/StockTwits sentiment is a current snapshot. Consequently the native
+layer may eventually run, but a historical controlled comparison remains
+`NON_EQUIVALENT` until cutoff-safe inputs are supplied through an unchanged
+public interface.

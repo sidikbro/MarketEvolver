@@ -61,3 +61,10 @@ dimension-by-dimension readiness matrix. See
 [external environments](external-environments.md) and
 [the external data audit](external-data-audit.md). Bring-up does not relax the
 operator approval, point-in-time, or exact-pin gates.
+
+Version 0.30 defines separate native and controlled comparison layers, a common
+pilot schema, `NOT_AVAILABLE` metric semantics, architecture-complexity
+accounting, three-run aggregation, and a wall-clock/token/cost guard. The first
+pilot remained blocked before execution because the shared provider credential
+was absent. See [pilot benchmark](pilot-benchmark.md) and
+[benchmark compatibility](benchmark-compatibility.md).

@@ -1,0 +1,65 @@
+{
+  "schema_version": "v0.30",
+  "created_at": "2026-08-13T12:57:38+03:00",
+  "source_base_sha": "e653e395ac0a8b6e94b9e3152d4f36216fc2c1b8",
+  "external_repositories": {
+    "stockbench": "ce8b2b3483590646ad3b650ac8221f43f76fd091",
+    "tradingagents": "a33fd4c0f134485a43553a2c23a63cb14adbd88f"
+  },
+  "environment_hashes": {
+    "stockbench_v029_original": "347a3620713b586b0736cdbf9423f0ff0e314061abe6459768ee7dee4856e0ff",
+    "stockbench_click_8_1_8_compatible": "4e1ae10b1532e3d84ed241ada708ffda4f575b4088b9d0c7b846f7851eae0683",
+    "tradingagents": "fc427ccc2e1a9710985345a06929887bd19a804e2586f315ad47435fae3b87ec"
+  },
+  "dependency_snapshots": {
+    "stockbench": "config/external/stockbench-v030-compatible.freeze.txt",
+    "tradingagents": "config/external/tradingagents-v029.freeze.txt"
+  },
+  "configuration_hashes": {
+    "stockbench_config": "1ef54a98f39fddb83e7df3f570fc1a168a34d150511d1852cdf50e4f5cb60acc",
+    "stockbench_requirements": "e3c60e1cca4219f31a624aade17cdc1d14221c868d3fccded4f48a088b488b72",
+    "tradingagents_pyproject": "cc11a95766eec8d73c9626cf6bea9647a7a5c0293e3a50cfe57418b1356bed70"
+  },
+  "provider": {
+    "name": "DeepSeek",
+    "configured_model": "deepseek-v4-flash",
+    "returned_model": null,
+    "status": "BLOCKED",
+    "reason": "DEEPSEEK_API_KEY absent",
+    "calls": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "estimated_cost_usd": "0"
+  },
+  "pilot_slice": {
+    "assets": ["AAPL"],
+    "period": ["2025-04-01", "2025-04-03"],
+    "frequency": "daily",
+    "initial_capital_usd": "100000",
+    "position_policy": "long-only, whole shares",
+    "execution": "decision after prior close; next-open fill where supported",
+    "benchmark": "AAPL buy-and-hold",
+    "seeds": [3001, 3002, 3003],
+    "repeats": 3
+  },
+  "marketevolver_modes": [
+    "deterministic_baseline",
+    "general_market_researcher",
+    "fixed_relevant_specialist",
+    "specialist_plus_skeptical_reviewer"
+  ],
+  "disabled": ["champion_challenger_learning", "topology_evolution"],
+  "cost_limit": {
+    "maximum_calls": 12,
+    "maximum_input_tokens": 24000,
+    "maximum_output_tokens": 6000,
+    "maximum_estimated_cost_usd": "0.25",
+    "maximum_wall_seconds": 900
+  },
+  "execution": {
+    "status": "BLOCKED_PROVIDER",
+    "native_runs": 0,
+    "controlled_runs": 0,
+    "results": "NOT_AVAILABLE"
+  }
+}

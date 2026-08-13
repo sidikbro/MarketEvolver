@@ -44,3 +44,9 @@ native CLI help then failed inside Typer/Click option construction, so the
 environment is `BLOCKED_DEPENDENCY`. No external file or dependency pin was
 changed. The 6,583-file cache is `PARTIALLY_REPRODUCIBLE`, not point-in-time
 proven; see [the audit](external-data-audit.md).
+
+Version 0.30 resolved only the CLI environment incompatibility: Click 8.1.8
+with the declared Typer 0.12.5 makes native help pass, with a clean `pip check`.
+This is recorded as `ENVIRONMENT_COMPATIBILITY`; no source or dependency file
+was changed. Dataset causality and the native legacy model profile remain
+separate blockers, so successful CLI startup is not benchmark readiness.
