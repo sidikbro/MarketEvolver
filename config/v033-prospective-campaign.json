@@ -1,0 +1,51 @@
+{
+  "schema_version": "v0.33",
+  "campaign_id": "v033-prospective-2026q3",
+  "definition_hash": "prospective-campaign:sha256:bd64e9b5f8ed3b91d09f559089538de7dce36a7062152b11af171fe8aa03a045",
+  "sealed_at": "2026-08-13T12:42:53+00:00",
+  "start_date": "2026-08-13",
+  "planned_end_date": "2026-08-27",
+  "universe": ["pair.usdils"],
+  "horizons_days": [7],
+  "evidence_requirements": [
+    "at least two independent sources",
+    "at least one authoritative official source",
+    "at least one reviewed-news corroboration",
+    "no future evidence",
+    "not all evidence stale"
+  ],
+  "expert_modes": [
+    "general_market_researcher",
+    "fixed_relevant_specialist",
+    "specialist_skeptical_reviewer",
+    "deterministic_baseline"
+  ],
+  "provider": "DeepSeek",
+  "model": "deepseek-v4-flash",
+  "sampling_policy": [
+    "Monday quiet controls",
+    "Tuesday/Thursday scheduled observations",
+    "predeclared eligible official-event days",
+    "predeclared corroborated-news days",
+    "negative controls retained as BLOCKED_EVIDENCE"
+  ],
+  "evaluation_policy": [{
+    "metric": "boi_policy_rate_change",
+    "operator": "lte",
+    "supported_threshold": -0.25,
+    "falsified_threshold": 0.25,
+    "unit": "percentage_points",
+    "missing_is_inconclusive": true
+  }],
+  "predeclared_metrics": [
+    "claim grounding rates",
+    "reviewer precision and recall",
+    "unsupported claim rate",
+    "unnecessary hypothesis rate",
+    "calls and tokens",
+    "cost and latency per accepted claim"
+  ],
+  "maximum_hypotheses_per_mode_case": 1,
+  "real_money_execution": false,
+  "future_outcome_access_before_maturity": false
+}

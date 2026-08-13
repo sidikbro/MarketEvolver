@@ -1,0 +1,31 @@
+{
+  "schema_version": "v0.33",
+  "append_only": true,
+  "campaign_id": "v033-prospective-2026q3",
+  "campaign_definition_hash": "prospective-campaign:sha256:bd64e9b5f8ed3b91d09f559089538de7dce36a7062152b11af171fe8aa03a045",
+  "cases": [
+    {"case_id": "prospective-case:sha256:0c205aaf570be808060c6ce8dd3e07519e7e39e57d43b66fac68bf6d4efca7bc", "observation_date": "2026-08-13", "target": "pair.usdils", "reason": "SCHEDULED", "status": "ELIGIBLE", "evidence_gate_reasons": []},
+    {"case_id": "prospective-case:sha256:1b8b3fc87bd97e48a8d6de0582f9fa04064ac1f190aa287d461a8a589574cd3b", "observation_date": "2026-08-17", "target": "pair.usdils", "reason": "QUIET_CONTROL", "status": "SCHEDULED", "evidence_gate_reasons": []},
+    {"case_id": "prospective-case:sha256:ffd316b3126b714667d51511c82a2f292349567dbcc9745c340536938f082b9c", "observation_date": "2026-08-18", "target": "pair.usdils", "reason": "SCHEDULED", "status": "SCHEDULED", "evidence_gate_reasons": []},
+    {"case_id": "prospective-case:sha256:d3b0996d949895b6969a4ad0173ee0e1db8f065b0be298babbd2c45b4b01c7cf", "observation_date": "2026-08-20", "target": "pair.usdils", "reason": "SCHEDULED", "status": "SCHEDULED", "evidence_gate_reasons": []},
+    {"case_id": "prospective-case:sha256:5e883b61c578a73638188a5e210b48c9d6a171793c2c41e7d1735a98233c94ac", "observation_date": "2026-08-24", "target": "pair.usdils", "reason": "QUIET_CONTROL", "status": "SCHEDULED", "evidence_gate_reasons": []},
+    {"case_id": "prospective-case:sha256:f1f0521f75bf965eab277cc31580e24213dfa6fa9089a930dc12933677dd6f3a", "observation_date": "2026-08-25", "target": "pair.usdils", "reason": "SCHEDULED", "status": "SCHEDULED", "evidence_gate_reasons": []},
+    {"case_id": "prospective-case:sha256:58dc4103f7d8d63975bc5801a76a8a47dbde2212fddcf1a7821ef553f998506a", "observation_date": "2026-08-27", "target": "pair.usdils", "reason": "SCHEDULED", "status": "SCHEDULED", "evidence_gate_reasons": []}
+  ],
+  "commitments": [{
+    "commitment_id": "sealed-research-commitment:sha256:36da4d76d82175263822f4220b47884c82a15e58b159287c90e14d0a6d5c14e3",
+    "original_schema_version": "v0.32",
+    "original_creation_provenance": "config/v032-governed-reference-run.json",
+    "case_id": "prospective-case:sha256:0c205aaf570be808060c6ce8dd3e07519e7e39e57d43b66fac68bf6d4efca7bc",
+    "cutoff": "2026-08-13T12:22:28.641688+00:00",
+    "committed_at": "2026-08-13T12:24:19.863585+00:00",
+    "maturity_date": "2026-09-01T00:00:00+00:00",
+    "state_history": ["SEALED", "AWAITING_OUTCOME"],
+    "compatibility": "LEGACY_REGISTERED_NOT_V033_EVALUABLE",
+    "compatibility_reason": "Original v0.32 commitment did not predeclare numeric SUPPORTED/FALSIFIED thresholds and contains unresolved BOI entity ambiguity; no threshold was added retrospectively.",
+    "outcome_status": null,
+    "outcome_data_hash": null
+  }],
+  "future_outcome_annotations_present": false,
+  "raw_third_party_content_present": false
+}
