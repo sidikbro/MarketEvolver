@@ -24,6 +24,20 @@ class Comparability(str, Enum):
     NON_EQUIVALENT = "NON_EQUIVALENT"
 
 
+class ExecutionStatus(str, Enum):
+    PASS = "PASS"
+    BLOCKED_DATASET = "BLOCKED_DATASET"
+    BLOCKED_PROVIDER = "BLOCKED_PROVIDER"
+    NON_EQUIVALENT = "NON_EQUIVALENT"
+    PARTIALLY_COMPARABLE = "PARTIALLY_COMPARABLE"
+    FAILED_EXTERNAL = "FAILED_EXTERNAL"
+    FAILED_MARKETEVOLVER = "FAILED_MARKETEVOLVER"
+
+
+class EndpointClass(str, Enum):
+    OPENAI_COMPATIBLE_CHAT = "openai_compatible_chat"
+
+
 class ComparisonMode(str, Enum):
     NATIVE_REFERENCE = "stockbench_native_reference"
     GENERALIST = "marketevolver_generalist"
@@ -32,6 +46,125 @@ class ComparisonMode(str, Enum):
     ANONYMIZED = "marketevolver_anonymized"
     FIXED_TOPOLOGY = "marketevolver_fixed_topology"
     GOVERNED_EVOLVED_TOPOLOGY = "marketevolver_governed_evolved_topology"
+
+
+@dataclass(frozen=True, slots=True)
+class ProviderExecutionProfile:
+    provider_id: str
+    provider_name: str
+    model_id: str
+    endpoint_class: EndpointClass
+    endpoint: str
+    temperature: float
+    max_tokens: int
+    timeout_seconds: int
+    retry_attempts: int
+    retry_backoff_seconds: float
+    structured_output: bool
+    input_price_per_million_tokens: str | None
+    output_price_per_million_tokens: str | None
+    created_at: datetime
+    provenance_version: str
+    profile_id: str = field(init=False)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "created_at", require_aware_utc(self.created_at, "created_at"))
+        if fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", self.provider_id) is None:
+            raise ValidationError("invalid provider ID")
+        if not self.endpoint.startswith("https://"):
+            raise ValidationError("provider endpoint must use HTTPS")
+        if not 0 <= self.temperature <= 2 or self.max_tokens <= 0 or self.timeout_seconds <= 0:
+            raise ValidationError("invalid provider sampling or timeout settings")
+        if self.retry_attempts < 1 or self.retry_backoff_seconds < 0:
+            raise ValidationError("invalid provider retry policy")
+        if not all((self.provider_name, self.model_id, self.provenance_version)):
+            raise ValidationError("provider profile metadata is required")
+        object.__setattr__(self, "profile_id", content_id("provider-execution-profile", self))
+
+
+@dataclass(frozen=True, slots=True)
+class ProviderValidationResult:
+    profile_id: str
+    status: ExecutionStatus
+    authenticated: bool
+    reachable: bool
+    model_available: bool
+    structured_response: bool
+    input_tokens: int
+    output_tokens: int
+    latency_ms: int
+    raw_response_hash: str | None
+    provider_request_id: str | None
+    error_summary: str | None
+    validated_at: datetime
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self, "validated_at", require_aware_utc(self.validated_at, "validated_at")
+        )
+        if min(self.input_tokens, self.output_tokens, self.latency_ms) < 0:
+            raise ValidationError("provider accounting cannot be negative")
+
+
+@dataclass(frozen=True, slots=True)
+class UsageAccounting:
+    input_tokens: int
+    output_tokens: int
+    calls: int
+    latency_ms: int
+    estimated_cost: str | None
+
+    def __post_init__(self) -> None:
+        if min(self.input_tokens, self.output_tokens, self.calls, self.latency_ms) < 0:
+            raise ValidationError("usage accounting cannot be negative")
+
+
+@dataclass(frozen=True, slots=True)
+class RepeatedRunSummary:
+    status: ExecutionStatus
+    repeats_requested: int
+    repeats_completed: int
+    metric_name: str
+    mean: float | None
+    population_variance: float | None
+    usage: UsageAccounting
+
+    def __post_init__(self) -> None:
+        if self.repeats_requested < 1 or not 0 <= self.repeats_completed <= self.repeats_requested:
+            raise ValidationError("invalid repeated-run counts")
+        if self.status is ExecutionStatus.PASS and self.repeats_completed != self.repeats_requested:
+            raise ValidationError("successful repeats must all complete")
+
+
+@dataclass(frozen=True, slots=True)
+class ExternalEnvironmentManifest:
+    benchmark_id: str
+    repository_manifest_id: str
+    provider_profile_id: str
+    python_version: str
+    dependency_state_hash: str
+    required_datasets: tuple[str, ...]
+    missing_datasets: tuple[str, ...]
+    expected_environment_variables: tuple[str, ...]
+    present_environment_variables: tuple[str, ...]
+    benchmark_config_hash: str
+    command: tuple[str, ...]
+    expected_outputs: tuple[str, ...]
+    runtime_requirements: tuple[str, ...]
+    patch_hash: str | None
+    patched_baseline: bool
+    status: ExecutionStatus
+    manifest_id: str = field(init=False)
+
+    def __post_init__(self) -> None:
+        if self.patched_baseline != (self.patch_hash is not None):
+            raise ValidationError("patched baseline label and patch hash must agree")
+        for value in (self.dependency_state_hash, self.benchmark_config_hash):
+            if fullmatch(r"[0-9a-f]{64}", value) is None:
+                raise ValidationError("environment manifests require SHA-256 hashes")
+        if not all((self.benchmark_id, self.repository_manifest_id, self.provider_profile_id)):
+            raise ValidationError("external environment manifest is incomplete")
+        object.__setattr__(self, "manifest_id", content_id("external-environment", self))
 
 
 @dataclass(frozen=True, slots=True)

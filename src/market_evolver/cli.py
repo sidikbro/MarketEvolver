@@ -315,6 +315,12 @@ def build_parser() -> argparse.ArgumentParser:
     external_report = external_commands.add_parser("report")
     external_report.add_argument("left", type=Path)
     external_report.add_argument("right", type=Path)
+    external_prepare = external_commands.add_parser("prepare")
+    external_prepare.add_argument("benchmark_id", choices=("stockbench", "tradingagents"))
+    provider = commands.add_parser("provider")
+    provider_commands = provider.add_subparsers(dest="provider_command", required=True)
+    provider_validate = provider_commands.add_parser("validate")
+    provider_validate.add_argument("provider_id", choices=("deepseek",))
     benchmark = commands.add_parser("benchmark")
     benchmark_commands = benchmark.add_subparsers(dest="benchmark_command", required=True)
     benchmark_commands.add_parser("run")
@@ -590,6 +596,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     if args.command == "external":
         return _external_command(args)
+    if args.command == "provider":
+        return _provider_command(args)
 
     config = load_config(args.config)
     engine = create_postgres_engine(config.database)
@@ -1964,6 +1972,12 @@ def _external_command(args: argparse.Namespace) -> int:
         )
         return 0
     project_root = Path.cwd()
+    if args.external_command == "prepare":
+        from market_evolver.external.execution import prepare_environment
+
+        environment_manifest = prepare_environment(args.benchmark_id, project_root)
+        print(json.dumps(asdict(environment_manifest), default=str, indent=2))
+        return int(environment_manifest.status.value.startswith("FAILED"))
     if args.external_command in {"inspect", "verify-sha"}:
         manifest = inspect_repository(args.benchmark_id, project_root)
         if args.external_command == "verify-sha":
@@ -1994,6 +2008,15 @@ def _external_command(args: argparse.Namespace) -> int:
         )
     )
     return 0
+
+
+def _provider_command(args: argparse.Namespace) -> int:
+    from market_evolver.external.provider import DeepSeekProvider
+    from market_evolver.external.schemas import ExecutionStatus
+
+    result = DeepSeekProvider().validate()
+    print(json.dumps(asdict(result), default=str, indent=2))
+    return int(result.status is not ExecutionStatus.PASS)
 
 
 def _comparison_manifest_from_json(path: Path) -> FairComparisonManifest:
