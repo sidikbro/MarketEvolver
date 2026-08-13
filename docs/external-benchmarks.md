@@ -54,3 +54,10 @@ validation, actual token/latency/cost accounting, repeated-run aggregation, and
 explicit execution blockers. See [the v0.28 result](results/external-benchmark-v028.md):
 credentials and verified datasets were unavailable, so no performance result
 was generated.
+
+Version 0.29 adds isolated external environments, native smoke checks, explicit
+network manifests, cache-vintage auditing, provider cost gates, and a
+dimension-by-dimension readiness matrix. See
+[external environments](external-environments.md) and
+[the external data audit](external-data-audit.md). Bring-up does not relax the
+operator approval, point-in-time, or exact-pin gates.

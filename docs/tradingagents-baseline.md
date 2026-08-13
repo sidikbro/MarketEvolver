@@ -31,3 +31,10 @@ In v0.28 the prepared native command is `tradingagents analyze --ticker <asset>
 news/fundamental snapshots, exact configuration, decision and portfolio paths,
 and a reset/declared memory state. The local environment lacks its dependencies
 and no verified dataset manifest or provider credential was available.
+
+In v0.29 an isolated Python 3.12 installation passed imports, CLI help, and 14
+selected native signal/date tests. The repository's `requirements.txt` is only
+`.` and is working-directory dependent, so setup explicitly targeted the
+sibling project and its development extra. DeepSeek V4 Flash is in the model
+catalog, but the historical data paths do not prove an information-time
+vintage. The comparison remains `BLOCKED_DATASET` after provider access returns.

@@ -1,0 +1,40 @@
+{
+  "schema_version": "v0.29",
+  "recorded_at": "2026-08-13T09:32:00Z",
+  "platform": "Linux 7.0.0-28-generic x86_64",
+  "environments": [
+    {
+      "benchmark_id": "stockbench",
+      "external_git_sha": "ce8b2b3483590646ad3b650ac8221f43f76fd091",
+      "python": "3.12.13",
+      "environment_type": "isolated conda prefix",
+      "dependency_manifest": "requirements.txt",
+      "dependency_manifest_sha256": "e3c60e1cca4219f31a624aade17cdc1d14221c868d3fccded4f48a088b488b72",
+      "pip_freeze_sha256": "347a3620713b586b0736cdbf9423f0ff0e314061abe6459768ee7dee4856e0ff",
+      "installed_package_count": 58,
+      "install_command": "python -m pip install -r requirements.txt",
+      "smoke_commands": ["import stockbench/core/data_hub/apps.run_backtest", "python -m stockbench.apps.run_backtest --help"],
+      "key_versions": {"openai": "3.0.0", "pandas": "2.2.3", "pyarrow": "25.0.1", "typer": "0.12.5", "click": "8.4.2"},
+      "install": "PASS",
+      "import_smoke": "PASS",
+      "cli_smoke": "FAIL_NATIVE_DEPENDENCY"
+    },
+    {
+      "benchmark_id": "tradingagents",
+      "external_git_sha": "a33fd4c0f134485a43553a2c23a63cb14adbd88f",
+      "python": "3.12.13",
+      "environment_type": "isolated conda prefix",
+      "dependency_manifest": "pyproject.toml",
+      "dependency_manifest_sha256": "cc11a95766eec8d73c9626cf6bea9647a7a5c0293e3a50cfe57418b1356bed70",
+      "pip_freeze_sha256": "fc427ccc2e1a9710985345a06929887bd19a804e2586f315ad47435fae3b87ec",
+      "installed_package_count": 113,
+      "install_command": "python -m pip install <pinned TradingAgents checkout>[dev]",
+      "smoke_commands": ["import tradingagents/TradingAgentsGraph", "tradingagents --help", "pytest test_signal_processing.py test_date_boundaries.py"],
+      "key_versions": {"tradingagents": "0.3.1", "langchain-core": "1.5.4", "langgraph": "1.2.11", "openai": "2.54.0", "pandas": "3.0.5", "typer": "0.27.1"},
+      "install": "PASS",
+      "import_smoke": "PASS",
+      "cli_smoke": "PASS",
+      "selected_native_tests": "14 PASS"
+    }
+  ]
+}

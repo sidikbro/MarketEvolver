@@ -78,3 +78,19 @@ run. StockBench cache vintage provenance is not established. TradingAgents
 memory must be disabled/reset and recorded before comparison. Price/news data,
 execution timing, cost application, prompts, and agent call counts must be
 audited from completed manifests before any winner claim.
+
+## v0.29 bring-up addendum
+
+On 2026-08-13, `DEEPSEEK_API_KEY`, `POLYGON_API_KEY`, and `FINNHUB_API_KEY`
+remained absent. DeepSeek status is `BLOCKED_PROVIDER`; zero requests, tokens,
+latency, and estimated cost were incurred. The preflight limit is two calls,
+1,024 input tokens, 512 output tokens, and USD 0.01, and fails closed when usage
+cannot be priced.
+
+StockBench installation/imports passed but native CLI construction failed, so
+its remaining state is `BLOCKED_DEPENDENCY`; its cache is only
+`PARTIALLY_REPRODUCIBLE`, and its legacy model profile is a mismatch.
+TradingAgents installation, imports, CLI help, and 14 selected native tests
+passed, but comparison remains `BLOCKED_DATASET`. With the credential absent,
+the primary decision for both comparisons is `BLOCKED_PROVIDER`. No minimal
+performance run was attempted and no winner claim is made.

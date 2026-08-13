@@ -37,3 +37,10 @@ dataset manifest with hashes, asset/date coverage, preprocessing, adjustment,
 and information-cutoff semantics is required. The native command is
 `python -m stockbench.apps.run_backtest` with pinned config, date range, and
 DeepSeek profile. Expected outputs are reports and logs under `storage/`.
+
+In v0.29 an isolated Python 3.12 environment successfully installed the
+unchanged requirements and passed package/data-hub/backtest-module imports. The
+native CLI help then failed inside Typer/Click option construction, so the
+environment is `BLOCKED_DEPENDENCY`. No external file or dependency pin was
+changed. The 6,583-file cache is `PARTIALLY_REPRODUCIBLE`, not point-in-time
+proven; see [the audit](external-data-audit.md).
