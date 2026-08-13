@@ -1,0 +1,1009 @@
+{
+  "archive_growth": {
+    "campaign_normalized_bytes_produced": 33760,
+    "campaign_raw_bytes_downloaded": 76364,
+    "live_vintages": 4,
+    "raw_content_committed": false,
+    "revisions": 0,
+    "source_day_projection": [
+      {
+        "day": "2026-08-13",
+        "normalized_bytes": 166,
+        "raw_bytes": 224,
+        "snapshots": 2,
+        "source_id": "il.boi"
+      },
+      {
+        "day": "2026-08-13",
+        "normalized_bytes": 33594,
+        "raw_bytes": 76140,
+        "snapshots": 2,
+        "source_id": "uk.bbc.business"
+      }
+    ],
+    "unique_content_addressed_artifacts": 5
+  },
+  "commitment": {
+    "commitment_id": "sealed-research-commitment:sha256:36da4d76d82175263822f4220b47884c82a15e58b159287c90e14d0a6d5c14e3",
+    "committed_at": "2026-08-13 12:24:19.863585+00:00",
+    "confidence": 0.4,
+    "cutoff": "2026-08-13 12:22:28.641688+00:00",
+    "evidence_ids": [
+      "evidence-vintage:sha256:8e7087d665435049031ee55538b82ef83ac6eca39a7dfa613d1b3c643f673434",
+      "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+    ],
+    "expected_mechanism": [
+      "disinflation momentum",
+      "growth caution",
+      "central bank policy inertia"
+    ],
+    "expert_mode": "specialist_skeptical_reviewer",
+    "horizon": "bounded horizon: 2026-09-01",
+    "hypothesis": "It is possible that if US disinflation continues and UK growth remains modest, BOI could reduce its 3.5% rate on 2026-09-01; however, if inflation pressures resurge or experts' warnings materialize as stagflation, a hold or hike remains plausible, and the outcome is highly uncertain.",
+    "model": "deepseek-v4-flash",
+    "provider": "DeepSeek",
+    "subject_id": "pair.usdils",
+    "uncertainty": "model confidence 0.400; reviewer ACCEPTED",
+    "vintage_ids": [
+      "evidence-vintage:sha256:8e7087d665435049031ee55538b82ef83ac6eca39a7dfa613d1b3c643f673434",
+      "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+    ]
+  },
+  "cutoff": "2026-08-13T12:22:28.641688+00:00",
+  "evidence": [
+    {
+      "canonical_uri": "https://www.boi.org.il/PublicApi/GetInterest",
+      "classification": "observed_live_at_time",
+      "first_observed_at": "2026-08-13T12:22:28.013517+00:00",
+      "inserted": true,
+      "normalized_artifact_id": "sha256:f598c8e8a6c5038b6200c8b0523a9bdce23f0b40259a066e3cac6073eb3a6412",
+      "normalized_size": 83,
+      "raw_artifact_id": "sha256:6fa15acbe03526617820ff0f312a6abf3ff7acc3f3dc485957ae6925cf598339",
+      "raw_size": 112,
+      "response_metadata": [
+        [
+          "date",
+          "Thu, 13 Aug 2026 12:22:28 GMT"
+        ],
+        [
+          "content-type",
+          "application/json; charset=utf-8"
+        ],
+        [
+          "content-length",
+          "112"
+        ],
+        [
+          "reviewed_contract",
+          "v0.32"
+        ]
+      ],
+      "retrieval_at": "2026-08-13T12:22:28.013517+00:00",
+      "server_date_at": "2026-08-13T12:22:28+00:00",
+      "source_id": "il.boi",
+      "source_published_at": null,
+      "trust_class": "official",
+      "vintage_id": "evidence-vintage:sha256:8e7087d665435049031ee55538b82ef83ac6eca39a7dfa613d1b3c643f673434"
+    },
+    {
+      "canonical_uri": "https://feeds.bbci.co.uk/news/business/rss.xml",
+      "classification": "observed_live_at_time",
+      "first_observed_at": "2026-08-13T12:22:28.267488+00:00",
+      "inserted": true,
+      "normalized_artifact_id": "sha256:f95dc3cfe7a868efd44d7164ec357d217d593c9ccbe3229c68c07cd9f15b4766",
+      "normalized_size": 16797,
+      "raw_artifact_id": "sha256:994403448b243dd98cf4466c031bf73361c8721e62eb563957bc88fe79ca8031",
+      "raw_size": 38070,
+      "response_metadata": [
+        [
+          "date",
+          "Thu, 13 Aug 2026 12:22:28 GMT"
+        ],
+        [
+          "content-type",
+          "text/xml; charset=utf-8"
+        ],
+        [
+          "content-length",
+          "38070"
+        ],
+        [
+          "reviewed_contract",
+          "v0.32"
+        ]
+      ],
+      "retrieval_at": "2026-08-13T12:22:28.267488+00:00",
+      "server_date_at": "2026-08-13T12:22:28+00:00",
+      "source_id": "uk.bbc.business",
+      "source_published_at": "2026-08-13T12:07:49+00:00",
+      "trust_class": "established_news",
+      "vintage_id": "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+    }
+  ],
+  "grounding_summary": {
+    "CONTRADICTED": 0,
+    "PARTIALLY_SUPPORTED": 6,
+    "SUPPORTED": 5,
+    "UNSUPPORTED": 2
+  },
+  "paper_runtime_observation": "NOT_CREATED",
+  "prior_attempts": [
+    {
+      "claims": [],
+      "grounding": [],
+      "mode": "general_market_researcher",
+      "outcome": {
+        "claims": [],
+        "error_summary": "reasoning budget exhausted before complete structured output",
+        "finish_reason": "length",
+        "reasoning_tokens": 3771,
+        "request_id": "194ec1c9-2bc1-4bd1-92ed-c9661716101d",
+        "response_hash": "sha256:e876d0df51c5bdadc355c2707e66a33160b41a705fa4e2adaa82eb6b80a72598",
+        "status": "MODEL_OUTPUT_EXHAUSTED",
+        "usage": {
+          "calls": 1,
+          "estimated_cost": "0.001246",
+          "input_tokens": 708,
+          "latency_ms": 36942,
+          "output_tokens": 4096
+        },
+        "visible_output_tokens": 325
+      }
+    }
+  ],
+  "provider_totals": {
+    "calls": 4,
+    "estimated_cost_usd": "0.005039",
+    "input_tokens": 3110,
+    "latency_ms": 148157,
+    "output_tokens": 16443,
+    "reasoning_tokens": 13813,
+    "request_ids_present": 4,
+    "response_hashes_present": 4,
+    "visible_output_tokens": 2630
+  },
+  "runs": [
+    {
+      "claims": [
+        {
+          "claim_id": "research-claim:sha256:d1f40523f5bfff03ed3128a37f8ffa3882706587356fb31ad18e908cca5c494b",
+          "claim_type": "observation",
+          "confidence": 1.0,
+          "contradicting_evidence_ids": [],
+          "created_at": "2026-08-13 12:23:31.533833+00:00",
+          "entities": [
+            "BOI",
+            "interest rate"
+          ],
+          "horizon": "current context",
+          "mechanisms": [
+            "direct_observation"
+          ],
+          "model_id": "deepseek-v4-flash",
+          "prompt_version": "governed-reference-v032/general_market_researcher",
+          "review_state": "proposed",
+          "supporting_evidence_ids": [
+            "evidence-vintage:sha256:8e7087d665435049031ee55538b82ef83ac6eca39a7dfa613d1b3c643f673434"
+          ],
+          "text": "Bank of Ireland (BOI) currently reports an interest rate of 3.5%, with the next interest date scheduled for 2026-09-01."
+        },
+        {
+          "claim_id": "research-claim:sha256:40cf5f7717a24730517b798d1da9977245ea4f2999cc9271ba4995f0cbf646b0",
+          "claim_type": "observation",
+          "confidence": 1.0,
+          "contradicting_evidence_ids": [],
+          "created_at": "2026-08-13 12:23:31.533833+00:00",
+          "entities": [
+            "UK economy"
+          ],
+          "horizon": "2026-08-13",
+          "mechanisms": [
+            "news_report"
+          ],
+          "model_id": "deepseek-v4-flash",
+          "prompt_version": "governed-reference-v032/general_market_researcher",
+          "review_state": "proposed",
+          "supporting_evidence_ids": [
+            "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+          ],
+          "text": "UK economy grows, but experts warn of challenging months ahead."
+        },
+        {
+          "claim_id": "research-claim:sha256:2f83e882d0e7928404a0fe0f88257a279ba08186b3e6b223d8d9902e0093a494",
+          "claim_type": "observation",
+          "confidence": 1.0,
+          "contradicting_evidence_ids": [],
+          "created_at": "2026-08-13 12:23:31.533833+00:00",
+          "entities": [
+            "US inflation",
+            "food costs",
+            "fuel costs"
+          ],
+          "horizon": "2026-08-12",
+          "mechanisms": [
+            "news_report"
+          ],
+          "model_id": "deepseek-v4-flash",
+          "prompt_version": "governed-reference-v032/general_market_researcher",
+          "review_state": "proposed",
+          "supporting_evidence_ids": [
+            "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+          ],
+          "text": "US inflation eases as food and fuel costs cool."
+        },
+        {
+          "claim_id": "research-claim:sha256:9e95b901a9f7c7b6867848f83f0db7942d46f6e23a803c28f2d73a8b8aa7736a",
+          "claim_type": "inference",
+          "confidence": 0.65,
+          "contradicting_evidence_ids": [],
+          "created_at": "2026-08-13 12:23:31.533833+00:00",
+          "entities": [
+            "global economy",
+            "US",
+            "UK",
+            "central banks"
+          ],
+          "horizon": "2026-08-13",
+          "mechanisms": [
+            "cross_economy_analysis"
+          ],
+          "model_id": "deepseek-v4-flash",
+          "prompt_version": "governed-reference-v032/general_market_researcher",
+          "review_state": "proposed",
+          "supporting_evidence_ids": [
+            "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+          ],
+          "text": "The divergent US and UK economic signals suggest central banks may face conflicting pressures, though the net policy direction is uncertain."
+        },
+        {
+          "claim_id": "research-claim:sha256:2afe909335986c6bab528539f1b700b07de291996f7d76d0c8bc65d5016601fe",
+          "claim_type": "hypothesis",
+          "confidence": 0.35,
+          "contradicting_evidence_ids": [],
+          "created_at": "2026-08-13 12:23:31.533833+00:00",
+          "entities": [
+            "BOI",
+            "interest rate"
+          ],
+          "horizon": "2026-09-01",
+          "mechanisms": [
+            "inflation_transmission",
+            "economic_uncertainty"
+          ],
+          "model_id": "deepseek-v4-flash",
+          "prompt_version": "governed-reference-v032/general_market_researcher",
+          "review_state": "proposed",
+          "supporting_evidence_ids": [
+            "evidence-vintage:sha256:8e7087d665435049031ee55538b82ef83ac6eca39a7dfa613d1b3c643f673434",
+            "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+          ],
+          "text": "BOI will likely lower its interest rate from 3.5% at the next decision on 2026-09-01, given observed disinflationary trends and economic warnings; however, this is speculative and could be wrong."
+        }
+      ],
+      "grounding": [
+        {
+          "accepted_evidence_ids": [
+            "evidence-vintage:sha256:8e7087d665435049031ee55538b82ef83ac6eca39a7dfa613d1b3c643f673434"
+          ],
+          "claim_id": "research-claim:sha256:d1f40523f5bfff03ed3128a37f8ffa3882706587356fb31ad18e908cca5c494b",
+          "rejected_evidence_ids": [],
+          "status": "UNSUPPORTED"
+        },
+        {
+          "accepted_evidence_ids": [
+            "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+          ],
+          "claim_id": "research-claim:sha256:40cf5f7717a24730517b798d1da9977245ea4f2999cc9271ba4995f0cbf646b0",
+          "rejected_evidence_ids": [],
+          "status": "PARTIALLY_SUPPORTED"
+        },
+        {
+          "accepted_evidence_ids": [
+            "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+          ],
+          "claim_id": "research-claim:sha256:2f83e882d0e7928404a0fe0f88257a279ba08186b3e6b223d8d9902e0093a494",
+          "rejected_evidence_ids": [],
+          "status": "PARTIALLY_SUPPORTED"
+        },
+        {
+          "accepted_evidence_ids": [
+            "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+          ],
+          "claim_id": "research-claim:sha256:9e95b901a9f7c7b6867848f83f0db7942d46f6e23a803c28f2d73a8b8aa7736a",
+          "rejected_evidence_ids": [],
+          "status": "PARTIALLY_SUPPORTED"
+        },
+        {
+          "accepted_evidence_ids": [
+            "evidence-vintage:sha256:8e7087d665435049031ee55538b82ef83ac6eca39a7dfa613d1b3c643f673434",
+            "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+          ],
+          "claim_id": "research-claim:sha256:2afe909335986c6bab528539f1b700b07de291996f7d76d0c8bc65d5016601fe",
+          "rejected_evidence_ids": [],
+          "status": "SUPPORTED"
+        }
+      ],
+      "mode": "general_market_researcher",
+      "outcome": {
+        "claims": [
+          {
+            "claim_id": "research-claim:sha256:d1f40523f5bfff03ed3128a37f8ffa3882706587356fb31ad18e908cca5c494b",
+            "claim_type": "observation",
+            "confidence": 1.0,
+            "contradicting_evidence_ids": [],
+            "created_at": "2026-08-13 12:23:31.533833+00:00",
+            "entities": [
+              "BOI",
+              "interest rate"
+            ],
+            "horizon": "current context",
+            "mechanisms": [
+              "direct_observation"
+            ],
+            "model_id": "deepseek-v4-flash",
+            "prompt_version": "governed-reference-v032/general_market_researcher",
+            "review_state": "proposed",
+            "supporting_evidence_ids": [
+              "evidence-vintage:sha256:8e7087d665435049031ee55538b82ef83ac6eca39a7dfa613d1b3c643f673434"
+            ],
+            "text": "Bank of Ireland (BOI) currently reports an interest rate of 3.5%, with the next interest date scheduled for 2026-09-01."
+          },
+          {
+            "claim_id": "research-claim:sha256:40cf5f7717a24730517b798d1da9977245ea4f2999cc9271ba4995f0cbf646b0",
+            "claim_type": "observation",
+            "confidence": 1.0,
+            "contradicting_evidence_ids": [],
+            "created_at": "2026-08-13 12:23:31.533833+00:00",
+            "entities": [
+              "UK economy"
+            ],
+            "horizon": "2026-08-13",
+            "mechanisms": [
+              "news_report"
+            ],
+            "model_id": "deepseek-v4-flash",
+            "prompt_version": "governed-reference-v032/general_market_researcher",
+            "review_state": "proposed",
+            "supporting_evidence_ids": [
+              "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+            ],
+            "text": "UK economy grows, but experts warn of challenging months ahead."
+          },
+          {
+            "claim_id": "research-claim:sha256:2f83e882d0e7928404a0fe0f88257a279ba08186b3e6b223d8d9902e0093a494",
+            "claim_type": "observation",
+            "confidence": 1.0,
+            "contradicting_evidence_ids": [],
+            "created_at": "2026-08-13 12:23:31.533833+00:00",
+            "entities": [
+              "US inflation",
+              "food costs",
+              "fuel costs"
+            ],
+            "horizon": "2026-08-12",
+            "mechanisms": [
+              "news_report"
+            ],
+            "model_id": "deepseek-v4-flash",
+            "prompt_version": "governed-reference-v032/general_market_researcher",
+            "review_state": "proposed",
+            "supporting_evidence_ids": [
+              "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+            ],
+            "text": "US inflation eases as food and fuel costs cool."
+          },
+          {
+            "claim_id": "research-claim:sha256:9e95b901a9f7c7b6867848f83f0db7942d46f6e23a803c28f2d73a8b8aa7736a",
+            "claim_type": "inference",
+            "confidence": 0.65,
+            "contradicting_evidence_ids": [],
+            "created_at": "2026-08-13 12:23:31.533833+00:00",
+            "entities": [
+              "global economy",
+              "US",
+              "UK",
+              "central banks"
+            ],
+            "horizon": "2026-08-13",
+            "mechanisms": [
+              "cross_economy_analysis"
+            ],
+            "model_id": "deepseek-v4-flash",
+            "prompt_version": "governed-reference-v032/general_market_researcher",
+            "review_state": "proposed",
+            "supporting_evidence_ids": [
+              "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+            ],
+            "text": "The divergent US and UK economic signals suggest central banks may face conflicting pressures, though the net policy direction is uncertain."
+          },
+          {
+            "claim_id": "research-claim:sha256:2afe909335986c6bab528539f1b700b07de291996f7d76d0c8bc65d5016601fe",
+            "claim_type": "hypothesis",
+            "confidence": 0.35,
+            "contradicting_evidence_ids": [],
+            "created_at": "2026-08-13 12:23:31.533833+00:00",
+            "entities": [
+              "BOI",
+              "interest rate"
+            ],
+            "horizon": "2026-09-01",
+            "mechanisms": [
+              "inflation_transmission",
+              "economic_uncertainty"
+            ],
+            "model_id": "deepseek-v4-flash",
+            "prompt_version": "governed-reference-v032/general_market_researcher",
+            "review_state": "proposed",
+            "supporting_evidence_ids": [
+              "evidence-vintage:sha256:8e7087d665435049031ee55538b82ef83ac6eca39a7dfa613d1b3c643f673434",
+              "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+            ],
+            "text": "BOI will likely lower its interest rate from 3.5% at the next decision on 2026-09-01, given observed disinflationary trends and economic warnings; however, this is speculative and could be wrong."
+          }
+        ],
+        "error_summary": null,
+        "finish_reason": "stop",
+        "reasoning_tokens": 6423,
+        "request_id": "1b313e0e-93b5-4604-a313-b090926f1885",
+        "response_hash": "sha256:3db01b0479928aa26ad92ec016bfbfea3a6754ebf1b0df30c15e8997b85057b5",
+        "status": "PASS",
+        "usage": {
+          "calls": 1,
+          "estimated_cost": "0.002107",
+          "input_tokens": 714,
+          "latency_ms": 62892,
+          "output_tokens": 7168
+        },
+        "visible_output_tokens": 745
+      }
+    },
+    {
+      "claims": [
+        {
+          "claim_id": "research-claim:sha256:2a0409ffec1f83090e18bb876712c5eefec0ae9c0093753ce0f0a9a9996ae38d",
+          "claim_type": "observation",
+          "confidence": 1.0,
+          "contradicting_evidence_ids": [],
+          "created_at": "2026-08-13 12:23:49.166131+00:00",
+          "entities": [
+            "BOI",
+            "interest-rate"
+          ],
+          "horizon": "current context",
+          "mechanisms": [
+            "current policy rate observation"
+          ],
+          "model_id": "deepseek-v4-flash",
+          "prompt_version": "governed-reference-v032/fixed_relevant_specialist",
+          "review_state": "proposed",
+          "supporting_evidence_ids": [
+            "evidence-vintage:sha256:8e7087d665435049031ee55538b82ef83ac6eca39a7dfa613d1b3c643f673434"
+          ],
+          "text": "The Bank of Ireland current interest is observed at 3.5%, with the next scheduled interest date on 2026-09-01 and no recorded last update."
+        },
+        {
+          "claim_id": "research-claim:sha256:c8d35465b9ef18b655cf0f22b2f8796394e231e9f6772c22484ca89acfaff473",
+          "claim_type": "observation",
+          "confidence": 1.0,
+          "contradicting_evidence_ids": [],
+          "created_at": "2026-08-13 12:23:49.166131+00:00",
+          "entities": [
+            "UK economy",
+            "US inflation",
+            "BBC Business"
+          ],
+          "horizon": "current context",
+          "mechanisms": [
+            "news reporting observation"
+          ],
+          "model_id": "deepseek-v4-flash",
+          "prompt_version": "governed-reference-v032/fixed_relevant_specialist",
+          "review_state": "proposed",
+          "supporting_evidence_ids": [
+            "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+          ],
+          "text": "Live BBC Business reporting from 2026-08-11 to 2026-08-13 includes statements that the UK economy is growing but experts warn of challenging months ahead, and that US inflation eased as food and fuel costs cooled."
+        },
+        {
+          "claim_id": "research-claim:sha256:3b4cb2bc4ef31a2a557122e304778682bfbc7c6d700413c5a875cccbd86d2c33",
+          "claim_type": "inference",
+          "confidence": 0.6,
+          "contradicting_evidence_ids": [],
+          "created_at": "2026-08-13 12:23:49.166131+00:00",
+          "entities": [
+            "BOI",
+            "UK economy",
+            "US inflation",
+            "interest-rate"
+          ],
+          "horizon": "bounded horizon: 2026-09-01",
+          "mechanisms": [
+            "mixed macroeconomic signals",
+            "central bank reaction function"
+          ],
+          "model_id": "deepseek-v4-flash",
+          "prompt_version": "governed-reference-v032/fixed_relevant_specialist",
+          "review_state": "proposed",
+          "supporting_evidence_ids": [
+            "evidence-vintage:sha256:8e7087d665435049031ee55538b82ef83ac6eca39a7dfa613d1b3c643f673434",
+            "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+          ],
+          "text": "Given the observed BOI rate of 3.5% and the mixed macro signals from BBC reporting\u2014UK growth with expert warnings, plus cooling US inflation\u2014there is uncertainty whether BOI will hold, cut, or hike at 2026-09-01; the balance of evidence currently does not strongly favor any single direction."
+        },
+        {
+          "claim_id": "research-claim:sha256:c01fe2fd9127fed970cec8e230a18b5325623016d56d7a327143867ef54c689a",
+          "claim_type": "hypothesis",
+          "confidence": 0.4,
+          "contradicting_evidence_ids": [],
+          "created_at": "2026-08-13 12:23:49.166131+00:00",
+          "entities": [
+            "BOI",
+            "UK economy",
+            "US inflation",
+            "interest-rate"
+          ],
+          "horizon": "bounded horizon: 2026-09-01",
+          "mechanisms": [
+            "disinflation momentum",
+            "growth caution",
+            "central bank policy inertia"
+          ],
+          "model_id": "deepseek-v4-flash",
+          "prompt_version": "governed-reference-v032/fixed_relevant_specialist",
+          "review_state": "proposed",
+          "supporting_evidence_ids": [
+            "evidence-vintage:sha256:8e7087d665435049031ee55538b82ef83ac6eca39a7dfa613d1b3c643f673434",
+            "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+          ],
+          "text": "It is possible that if US disinflation continues and UK growth remains modest, BOI could reduce its 3.5% rate on 2026-09-01; however, if inflation pressures resurge or experts' warnings materialize as stagflation, a hold or hike remains plausible, and the outcome is highly uncertain."
+        }
+      ],
+      "grounding": [
+        {
+          "accepted_evidence_ids": [
+            "evidence-vintage:sha256:8e7087d665435049031ee55538b82ef83ac6eca39a7dfa613d1b3c643f673434"
+          ],
+          "claim_id": "research-claim:sha256:2a0409ffec1f83090e18bb876712c5eefec0ae9c0093753ce0f0a9a9996ae38d",
+          "rejected_evidence_ids": [],
+          "status": "UNSUPPORTED"
+        },
+        {
+          "accepted_evidence_ids": [
+            "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+          ],
+          "claim_id": "research-claim:sha256:c8d35465b9ef18b655cf0f22b2f8796394e231e9f6772c22484ca89acfaff473",
+          "rejected_evidence_ids": [],
+          "status": "PARTIALLY_SUPPORTED"
+        },
+        {
+          "accepted_evidence_ids": [
+            "evidence-vintage:sha256:8e7087d665435049031ee55538b82ef83ac6eca39a7dfa613d1b3c643f673434",
+            "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+          ],
+          "claim_id": "research-claim:sha256:3b4cb2bc4ef31a2a557122e304778682bfbc7c6d700413c5a875cccbd86d2c33",
+          "rejected_evidence_ids": [],
+          "status": "SUPPORTED"
+        },
+        {
+          "accepted_evidence_ids": [
+            "evidence-vintage:sha256:8e7087d665435049031ee55538b82ef83ac6eca39a7dfa613d1b3c643f673434",
+            "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+          ],
+          "claim_id": "research-claim:sha256:c01fe2fd9127fed970cec8e230a18b5325623016d56d7a327143867ef54c689a",
+          "rejected_evidence_ids": [],
+          "status": "SUPPORTED"
+        }
+      ],
+      "mode": "fixed_relevant_specialist",
+      "outcome": {
+        "claims": [
+          {
+            "claim_id": "research-claim:sha256:2a0409ffec1f83090e18bb876712c5eefec0ae9c0093753ce0f0a9a9996ae38d",
+            "claim_type": "observation",
+            "confidence": 1.0,
+            "contradicting_evidence_ids": [],
+            "created_at": "2026-08-13 12:23:49.166131+00:00",
+            "entities": [
+              "BOI",
+              "interest-rate"
+            ],
+            "horizon": "current context",
+            "mechanisms": [
+              "current policy rate observation"
+            ],
+            "model_id": "deepseek-v4-flash",
+            "prompt_version": "governed-reference-v032/fixed_relevant_specialist",
+            "review_state": "proposed",
+            "supporting_evidence_ids": [
+              "evidence-vintage:sha256:8e7087d665435049031ee55538b82ef83ac6eca39a7dfa613d1b3c643f673434"
+            ],
+            "text": "The Bank of Ireland current interest is observed at 3.5%, with the next scheduled interest date on 2026-09-01 and no recorded last update."
+          },
+          {
+            "claim_id": "research-claim:sha256:c8d35465b9ef18b655cf0f22b2f8796394e231e9f6772c22484ca89acfaff473",
+            "claim_type": "observation",
+            "confidence": 1.0,
+            "contradicting_evidence_ids": [],
+            "created_at": "2026-08-13 12:23:49.166131+00:00",
+            "entities": [
+              "UK economy",
+              "US inflation",
+              "BBC Business"
+            ],
+            "horizon": "current context",
+            "mechanisms": [
+              "news reporting observation"
+            ],
+            "model_id": "deepseek-v4-flash",
+            "prompt_version": "governed-reference-v032/fixed_relevant_specialist",
+            "review_state": "proposed",
+            "supporting_evidence_ids": [
+              "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+            ],
+            "text": "Live BBC Business reporting from 2026-08-11 to 2026-08-13 includes statements that the UK economy is growing but experts warn of challenging months ahead, and that US inflation eased as food and fuel costs cooled."
+          },
+          {
+            "claim_id": "research-claim:sha256:3b4cb2bc4ef31a2a557122e304778682bfbc7c6d700413c5a875cccbd86d2c33",
+            "claim_type": "inference",
+            "confidence": 0.6,
+            "contradicting_evidence_ids": [],
+            "created_at": "2026-08-13 12:23:49.166131+00:00",
+            "entities": [
+              "BOI",
+              "UK economy",
+              "US inflation",
+              "interest-rate"
+            ],
+            "horizon": "bounded horizon: 2026-09-01",
+            "mechanisms": [
+              "mixed macroeconomic signals",
+              "central bank reaction function"
+            ],
+            "model_id": "deepseek-v4-flash",
+            "prompt_version": "governed-reference-v032/fixed_relevant_specialist",
+            "review_state": "proposed",
+            "supporting_evidence_ids": [
+              "evidence-vintage:sha256:8e7087d665435049031ee55538b82ef83ac6eca39a7dfa613d1b3c643f673434",
+              "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+            ],
+            "text": "Given the observed BOI rate of 3.5% and the mixed macro signals from BBC reporting\u2014UK growth with expert warnings, plus cooling US inflation\u2014there is uncertainty whether BOI will hold, cut, or hike at 2026-09-01; the balance of evidence currently does not strongly favor any single direction."
+          },
+          {
+            "claim_id": "research-claim:sha256:c01fe2fd9127fed970cec8e230a18b5325623016d56d7a327143867ef54c689a",
+            "claim_type": "hypothesis",
+            "confidence": 0.4,
+            "contradicting_evidence_ids": [],
+            "created_at": "2026-08-13 12:23:49.166131+00:00",
+            "entities": [
+              "BOI",
+              "UK economy",
+              "US inflation",
+              "interest-rate"
+            ],
+            "horizon": "bounded horizon: 2026-09-01",
+            "mechanisms": [
+              "disinflation momentum",
+              "growth caution",
+              "central bank policy inertia"
+            ],
+            "model_id": "deepseek-v4-flash",
+            "prompt_version": "governed-reference-v032/fixed_relevant_specialist",
+            "review_state": "proposed",
+            "supporting_evidence_ids": [
+              "evidence-vintage:sha256:8e7087d665435049031ee55538b82ef83ac6eca39a7dfa613d1b3c643f673434",
+              "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+            ],
+            "text": "It is possible that if US disinflation continues and UK growth remains modest, BOI could reduce its 3.5% rate on 2026-09-01; however, if inflation pressures resurge or experts' warnings materialize as stagflation, a hold or hike remains plausible, and the outcome is highly uncertain."
+          }
+        ],
+        "error_summary": null,
+        "finish_reason": "stop",
+        "reasoning_tokens": 1103,
+        "request_id": "ebbc505c-db4c-4909-9084-90f426b6ba19",
+        "response_hash": "sha256:c79437f99686c939ece3aca1fddb619d6da88f3a1fb0770a8532d70e949e56dd",
+        "status": "PASS",
+        "usage": {
+          "calls": 1,
+          "estimated_cost": "0.000622",
+          "input_tokens": 715,
+          "latency_ms": 17629,
+          "output_tokens": 1864
+        },
+        "visible_output_tokens": 761
+      }
+    },
+    {
+      "claims": [
+        {
+          "claim_id": "research-claim:sha256:f829520b0e98359ea56d8596f0cdd67e609f88cde957795a627f317fd88c6a5d",
+          "claim_type": "observation",
+          "confidence": 1.0,
+          "contradicting_evidence_ids": [],
+          "created_at": "2026-08-13 12:24:19.861808+00:00",
+          "entities": [
+            "BOI",
+            "interest_rate",
+            "policy_date"
+          ],
+          "horizon": "current context through 2026-09-01",
+          "mechanisms": [
+            "policy_rate",
+            "decision_date"
+          ],
+          "model_id": "deepseek-v4-flash",
+          "prompt_version": "governed-reference-v032/specialist-skeptical-reviewer",
+          "review_state": "proposed",
+          "supporting_evidence_ids": [
+            "evidence-vintage:sha256:8e7087d665435049031ee55538b82ef83ac6eca39a7dfa613d1b3c643f673434"
+          ],
+          "text": "BOI current policy rate is 3.5%; last update is not recorded; the next scheduled interest decision date is 2026-09-01."
+        },
+        {
+          "claim_id": "research-claim:sha256:a9d03414998c894bcd0faaae69441f7ae3fe0b7261df9ff4a6a2fbe3a12c4f84",
+          "claim_type": "observation",
+          "confidence": 1.0,
+          "contradicting_evidence_ids": [],
+          "created_at": "2026-08-13 12:24:19.861808+00:00",
+          "entities": [
+            "UK economy",
+            "US inflation",
+            "BBC Business"
+          ],
+          "horizon": "2026-08-13 current context",
+          "mechanisms": [
+            "macro_indicators"
+          ],
+          "model_id": "deepseek-v4-flash",
+          "prompt_version": "governed-reference-v032/specialist-skeptical-reviewer",
+          "review_state": "proposed",
+          "supporting_evidence_ids": [
+            "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+          ],
+          "text": "BBC Business reports as of 2026-08-13: UK economy grows while experts warn of challenging months ahead; US inflation eases; other developments include a Trump lawsuit, Spotify AI-labeling, and a France telemarketing ban."
+        },
+        {
+          "claim_id": "research-claim:sha256:015a0027b344cc20ebae85fc6c93baccfd9bb981bbbb5d876000f6ec276375c4",
+          "claim_type": "inference",
+          "confidence": 0.7,
+          "contradicting_evidence_ids": [],
+          "created_at": "2026-08-13 12:24:19.861808+00:00",
+          "entities": [
+            "BOI",
+            "UK economy",
+            "US inflation"
+          ],
+          "horizon": "through 2026-09-01",
+          "mechanisms": [
+            "rate_decision_context"
+          ],
+          "model_id": "deepseek-v4-flash",
+          "prompt_version": "governed-reference-v032/specialist-skeptical-reviewer",
+          "review_state": "proposed",
+          "supporting_evidence_ids": [
+            "evidence-vintage:sha256:8e7087d665435049031ee55538b82ef83ac6eca39a7dfa613d1b3c643f673434",
+            "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+          ],
+          "text": "The observed BOI policy state and the BBC Business macro observations are not contradictory; they establish conditions that could influence the 2026-09-01 BOI decision but do not fix its outcome."
+        },
+        {
+          "claim_id": "research-claim:sha256:3ecf4d0f621d39d91ec5bd7cc876d760e6776247a35bbe05f82974de50ef0c03",
+          "claim_type": "hypothesis",
+          "confidence": 0.5,
+          "contradicting_evidence_ids": [],
+          "created_at": "2026-08-13 12:24:19.861808+00:00",
+          "entities": [
+            "BOI",
+            "interest_rate",
+            "US inflation",
+            "UK economy"
+          ],
+          "horizon": "2026-09-01",
+          "mechanisms": [
+            "reduction_scenario",
+            "hold_or_hike_scenario"
+          ],
+          "model_id": "deepseek-v4-flash",
+          "prompt_version": "governed-reference-v032/specialist-skeptical-reviewer",
+          "review_state": "proposed",
+          "supporting_evidence_ids": [
+            "evidence-vintage:sha256:8e7087d665435049031ee55538b82ef83ac6eca39a7dfa613d1b3c643f673434",
+            "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+          ],
+          "text": "BOI could reduce its 3.5% rate on 2026-09-01 if US disinflation continues and UK growth remains modest; however, if inflation pressures resurge or experts' warnings materialize as stagflation, a hold or hike remains plausible; the outcome is highly uncertain."
+        }
+      ],
+      "grounding": [
+        {
+          "accepted_evidence_ids": [
+            "evidence-vintage:sha256:8e7087d665435049031ee55538b82ef83ac6eca39a7dfa613d1b3c643f673434"
+          ],
+          "claim_id": "research-claim:sha256:f829520b0e98359ea56d8596f0cdd67e609f88cde957795a627f317fd88c6a5d",
+          "rejected_evidence_ids": [],
+          "status": "PARTIALLY_SUPPORTED"
+        },
+        {
+          "accepted_evidence_ids": [
+            "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+          ],
+          "claim_id": "research-claim:sha256:a9d03414998c894bcd0faaae69441f7ae3fe0b7261df9ff4a6a2fbe3a12c4f84",
+          "rejected_evidence_ids": [],
+          "status": "PARTIALLY_SUPPORTED"
+        },
+        {
+          "accepted_evidence_ids": [
+            "evidence-vintage:sha256:8e7087d665435049031ee55538b82ef83ac6eca39a7dfa613d1b3c643f673434",
+            "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+          ],
+          "claim_id": "research-claim:sha256:015a0027b344cc20ebae85fc6c93baccfd9bb981bbbb5d876000f6ec276375c4",
+          "rejected_evidence_ids": [],
+          "status": "SUPPORTED"
+        },
+        {
+          "accepted_evidence_ids": [
+            "evidence-vintage:sha256:8e7087d665435049031ee55538b82ef83ac6eca39a7dfa613d1b3c643f673434",
+            "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+          ],
+          "claim_id": "research-claim:sha256:3ecf4d0f621d39d91ec5bd7cc876d760e6776247a35bbe05f82974de50ef0c03",
+          "rejected_evidence_ids": [],
+          "status": "SUPPORTED"
+        }
+      ],
+      "mode": "specialist_skeptical_reviewer",
+      "outcome": {
+        "claims": [
+          {
+            "claim_id": "research-claim:sha256:f829520b0e98359ea56d8596f0cdd67e609f88cde957795a627f317fd88c6a5d",
+            "claim_type": "observation",
+            "confidence": 1.0,
+            "contradicting_evidence_ids": [],
+            "created_at": "2026-08-13 12:24:19.861808+00:00",
+            "entities": [
+              "BOI",
+              "interest_rate",
+              "policy_date"
+            ],
+            "horizon": "current context through 2026-09-01",
+            "mechanisms": [
+              "policy_rate",
+              "decision_date"
+            ],
+            "model_id": "deepseek-v4-flash",
+            "prompt_version": "governed-reference-v032/specialist-skeptical-reviewer",
+            "review_state": "proposed",
+            "supporting_evidence_ids": [
+              "evidence-vintage:sha256:8e7087d665435049031ee55538b82ef83ac6eca39a7dfa613d1b3c643f673434"
+            ],
+            "text": "BOI current policy rate is 3.5%; last update is not recorded; the next scheduled interest decision date is 2026-09-01."
+          },
+          {
+            "claim_id": "research-claim:sha256:a9d03414998c894bcd0faaae69441f7ae3fe0b7261df9ff4a6a2fbe3a12c4f84",
+            "claim_type": "observation",
+            "confidence": 1.0,
+            "contradicting_evidence_ids": [],
+            "created_at": "2026-08-13 12:24:19.861808+00:00",
+            "entities": [
+              "UK economy",
+              "US inflation",
+              "BBC Business"
+            ],
+            "horizon": "2026-08-13 current context",
+            "mechanisms": [
+              "macro_indicators"
+            ],
+            "model_id": "deepseek-v4-flash",
+            "prompt_version": "governed-reference-v032/specialist-skeptical-reviewer",
+            "review_state": "proposed",
+            "supporting_evidence_ids": [
+              "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+            ],
+            "text": "BBC Business reports as of 2026-08-13: UK economy grows while experts warn of challenging months ahead; US inflation eases; other developments include a Trump lawsuit, Spotify AI-labeling, and a France telemarketing ban."
+          },
+          {
+            "claim_id": "research-claim:sha256:015a0027b344cc20ebae85fc6c93baccfd9bb981bbbb5d876000f6ec276375c4",
+            "claim_type": "inference",
+            "confidence": 0.7,
+            "contradicting_evidence_ids": [],
+            "created_at": "2026-08-13 12:24:19.861808+00:00",
+            "entities": [
+              "BOI",
+              "UK economy",
+              "US inflation"
+            ],
+            "horizon": "through 2026-09-01",
+            "mechanisms": [
+              "rate_decision_context"
+            ],
+            "model_id": "deepseek-v4-flash",
+            "prompt_version": "governed-reference-v032/specialist-skeptical-reviewer",
+            "review_state": "proposed",
+            "supporting_evidence_ids": [
+              "evidence-vintage:sha256:8e7087d665435049031ee55538b82ef83ac6eca39a7dfa613d1b3c643f673434",
+              "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+            ],
+            "text": "The observed BOI policy state and the BBC Business macro observations are not contradictory; they establish conditions that could influence the 2026-09-01 BOI decision but do not fix its outcome."
+          },
+          {
+            "claim_id": "research-claim:sha256:3ecf4d0f621d39d91ec5bd7cc876d760e6776247a35bbe05f82974de50ef0c03",
+            "claim_type": "hypothesis",
+            "confidence": 0.5,
+            "contradicting_evidence_ids": [],
+            "created_at": "2026-08-13 12:24:19.861808+00:00",
+            "entities": [
+              "BOI",
+              "interest_rate",
+              "US inflation",
+              "UK economy"
+            ],
+            "horizon": "2026-09-01",
+            "mechanisms": [
+              "reduction_scenario",
+              "hold_or_hike_scenario"
+            ],
+            "model_id": "deepseek-v4-flash",
+            "prompt_version": "governed-reference-v032/specialist-skeptical-reviewer",
+            "review_state": "proposed",
+            "supporting_evidence_ids": [
+              "evidence-vintage:sha256:8e7087d665435049031ee55538b82ef83ac6eca39a7dfa613d1b3c643f673434",
+              "evidence-vintage:sha256:912b2e8f3c6a075db530d1dd19bb6154a32e386dc5327593ead9fa5d565d80ff"
+            ],
+            "text": "BOI could reduce its 3.5% rate on 2026-09-01 if US disinflation continues and UK growth remains modest; however, if inflation pressures resurge or experts' warnings materialize as stagflation, a hold or hike remains plausible; the outcome is highly uncertain."
+          }
+        ],
+        "error_summary": null,
+        "finish_reason": "stop",
+        "reasoning_tokens": 2516,
+        "request_id": "bfd10f83-2efb-4d77-914c-5533b7132aca",
+        "response_hash": "sha256:1a9524349ab28ca3c1e6f632dce25d1d13f3c1af2c62a9bca8e565a70a4453ba",
+        "status": "PASS",
+        "usage": {
+          "calls": 1,
+          "estimated_cost": "0.001064",
+          "input_tokens": 973,
+          "latency_ms": 30694,
+          "output_tokens": 3315
+        },
+        "visible_output_tokens": 799
+      },
+      "reviewer_evaluation": {
+        "claims_accepted": 4,
+        "claims_rejected": 0,
+        "contradictions_identified": 0,
+        "disposition": "ACCEPTED",
+        "hypothesis_change": "unchanged",
+        "uncertainty_change": "unchanged",
+        "unsupported_claims_caught": 0
+      }
+    }
+  ],
+  "schema_version": "v0.32",
+  "status": "PASS_WITH_REJECTED_UNSUPPORTED_CLAIMS",
+  "subject_id": "pair.usdils",
+  "sufficiency": {
+    "contradictory_records": 0,
+    "independent_sources": 2,
+    "news_sources": 1,
+    "official_sources": 1,
+    "reasons": [],
+    "stale_records": 0,
+    "status": "PASS"
+  },
+  "temporal_audit": {
+    "future_inputs": 0,
+    "future_revisions": 0,
+    "outcome_information": 0,
+    "rule": "first_observed_at <= research_cutoff",
+    "temporal_leakage": 0
+  },
+  "unsupported_claims_rejected": [
+    {
+      "claim_id": "research-claim:sha256:d1f40523f5bfff03ed3128a37f8ffa3882706587356fb31ad18e908cca5c494b",
+      "mode": "general_market_researcher",
+      "reason": "model expanded BOI as Bank of Ireland; source il.boi is Bank of Israel"
+    },
+    {
+      "claim_id": "research-claim:sha256:2a0409ffec1f83090e18bb876712c5eefec0ae9c0093753ce0f0a9a9996ae38d",
+      "mode": "fixed_relevant_specialist",
+      "reason": "model expanded BOI as Bank of Ireland; source il.boi is Bank of Israel"
+    }
+  ]
+}

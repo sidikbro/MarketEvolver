@@ -1,0 +1,42 @@
+{
+  "schema_version": "v0.32",
+  "purpose": "governed evidence-pipeline and LLM-backed research validation",
+  "universe": ["pair.usdils"],
+  "reviewed_live_sources": [
+    {
+      "source_id": "il.boi",
+      "domain": "www.boi.org.il",
+      "trust_class": "authoritative_official"
+    },
+    {
+      "source_id": "uk.bbc.business",
+      "domain": "feeds.bbci.co.uk",
+      "trust_class": "reviewed_news"
+    }
+  ],
+  "disabled_sources": [
+    "telegram.allowlisted",
+    "il.tase.maya",
+    "global.geopolitical.official"
+  ],
+  "provider": {
+    "name": "DeepSeek",
+    "model": "deepseek-v4-flash",
+    "temperature": 0,
+    "maximum_output_tokens_per_call": 8192,
+    "maximum_calls": 4,
+    "maximum_input_tokens": 32000,
+    "maximum_output_tokens": 28672,
+    "maximum_estimated_cost_usd": "0.05"
+  },
+  "modes": [
+    "general_market_researcher",
+    "fixed_relevant_specialist",
+    "specialist_skeptical_reviewer"
+  ],
+  "champion_challenger": false,
+  "topology_mutation": false,
+  "expert_creation": false,
+  "self_improvement": false,
+  "real_money_execution": false
+}

@@ -10,7 +10,10 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from market_evolver.research.governed import AccountedResearchOutcome
 
 from market_evolver.errors import IntegrityViolation
 from market_evolver.external.schemas import (
@@ -125,6 +128,90 @@ class DeepSeekProvider:
             tuple(sorted(token_usage.items())),
             f"sha256:{hashlib.sha256(raw).hexdigest()}",
             parse_claims(claims_json, self.model_id, prompt_version, responded),
+        )
+
+    def invoke_accounted(
+        self,
+        task: ResearchTask,
+        context: ResearchContext,
+        *,
+        prompt_version: str,
+        settings: Mapping[str, str],
+    ) -> AccountedResearchOutcome:
+        from market_evolver.research.governed import (
+            AccountedResearchOutcome,
+            GovernedRunStatus,
+        )
+
+        if not self._api_key:
+            raise IntegrityViolation("DeepSeek credential is absent")
+        started = time.monotonic()
+        body = {
+            "model": self.model_id,
+            "messages": [{"role": "user", "content": render_prompt(task, context, prompt_version)}],
+            "temperature": self.profile.temperature,
+            "max_tokens": self.profile.max_tokens,
+            "response_format": {"type": "json_object"},
+        }
+        raw, header_request_id = self._request(body)
+        response_hash = f"sha256:{hashlib.sha256(raw).hexdigest()}"
+        try:
+            document = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise IntegrityViolation("malformed DeepSeek response envelope") from exc
+        usage_document = document.get("usage", {}) if isinstance(document, dict) else {}
+        input_tokens = int(usage_document.get("prompt_tokens", 0)) if isinstance(usage_document, dict) else 0
+        output_tokens = int(usage_document.get("completion_tokens", 0)) if isinstance(usage_document, dict) else 0
+        details = usage_document.get("completion_tokens_details", {}) if isinstance(usage_document, dict) else {}
+        reasoning_tokens = int(details.get("reasoning_tokens", 0)) if isinstance(details, dict) else 0
+        visible_tokens = max(0, output_tokens - reasoning_tokens)
+        accounting = usage_accounting(
+            input_tokens,
+            output_tokens,
+            1,
+            round((time.monotonic() - started) * 1000),
+            self.profile,
+        )
+        request_id = header_request_id
+        if request_id is None and isinstance(document, dict) and document.get("id"):
+            request_id = str(document["id"])
+        try:
+            choice = document["choices"][0]
+            message = choice["message"]
+            content = message.get("content", "")
+            finish_reason = choice.get("finish_reason")
+        except (KeyError, IndexError, TypeError):
+            return AccountedResearchOutcome(
+                GovernedRunStatus.SEMANTIC_PARSE_FAILED,
+                (), accounting, reasoning_tokens, visible_tokens, request_id,
+                response_hash, None, "malformed chat response envelope",
+            )
+        if not isinstance(content, str) or not content.strip():
+            exhausted = finish_reason == "length" or output_tokens >= self.profile.max_tokens
+            return AccountedResearchOutcome(
+                GovernedRunStatus.MODEL_OUTPUT_EXHAUSTED if exhausted else GovernedRunStatus.SEMANTIC_PARSE_FAILED,
+                (), accounting, reasoning_tokens, visible_tokens, request_id,
+                response_hash, str(finish_reason) if finish_reason is not None else None,
+                "model produced no visible structured output",
+            )
+        try:
+            structured = json.loads(content)
+            claims_document = structured["claims"] if isinstance(structured, dict) else structured
+            claims = parse_claims(
+                json.dumps(claims_document), self.model_id, prompt_version, self._clock()
+            )
+        except (json.JSONDecodeError, KeyError, TypeError, IntegrityViolation):
+            exhausted = finish_reason == "length" or output_tokens >= self.profile.max_tokens
+            return AccountedResearchOutcome(
+                GovernedRunStatus.MODEL_OUTPUT_EXHAUSTED if exhausted else GovernedRunStatus.SEMANTIC_PARSE_FAILED,
+                (), accounting, reasoning_tokens, visible_tokens, request_id,
+                response_hash, str(finish_reason) if finish_reason is not None else None,
+                "provider output failed the research claim schema",
+            )
+        return AccountedResearchOutcome(
+            GovernedRunStatus.PASS,
+            claims, accounting, reasoning_tokens, visible_tokens, request_id,
+            response_hash, str(finish_reason) if finish_reason is not None else None, None,
         )
 
     def validate(self) -> ProviderValidationResult:

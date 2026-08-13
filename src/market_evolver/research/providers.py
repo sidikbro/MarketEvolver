@@ -51,7 +51,27 @@ def render_prompt(task: ResearchTask, context: ResearchContext, prompt_version: 
             ),
             "task": task.value,
             "prompt_version": prompt_version,
-            "required_output": "JSON array of typed, evidence-grounded claims",
+            "allowed_evidence_ids": sorted(context.allowed_provenance_ids),
+            "required_output": {
+                "format": "JSON object with a claims array",
+                "claim_fields": {
+                    "claim_type": "observation | inference | hypothesis",
+                    "text": "non-action research statement including uncertainty where material",
+                    "supporting_evidence_ids": "non-empty subset of allowed_evidence_ids",
+                    "contradicting_evidence_ids": "subset of allowed_evidence_ids",
+                    "entities": "entity identifiers",
+                    "mechanisms": "explicit mechanism mappings",
+                    "horizon": "bounded horizon or current context",
+                    "confidence": "number from 0 to 1"
+                },
+                "requirements": [
+                    "separate observations, inferences, and hypotheses",
+                    "state uncertainty rather than forcing direction",
+                    "omit unsupported claims",
+                    "never invent evidence identifiers",
+                    "do not produce BUY, SELL, allocation, order, or trade recommendations"
+                ]
+            },
             "evidence_data": items,
         },
         ensure_ascii=False,
