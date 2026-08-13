@@ -55,6 +55,7 @@ from market_evolver.expert.routing import panel_route
 from market_evolver.expert.routing import route as route_expert
 from market_evolver.expert.schemas import ExpertStatus
 from market_evolver.expert.seed import FIXED_EXPERTS
+from market_evolver.external.schemas import FairComparisonManifest
 from market_evolver.fusion.benchmark import run_false_rumor_benchmark
 from market_evolver.fusion.engine import calculate_reputation, current_corroboration_state
 from market_evolver.fusion.repository import SqlFusionRepository
@@ -301,6 +302,19 @@ def build_parser() -> argparse.ArgumentParser:
     archive_source.add_argument("source_id")
     archive_commands.add_parser("status")
     archive_commands.add_parser("backfill-report")
+    external = commands.add_parser("external")
+    external_commands = external.add_subparsers(dest="external_command", required=True)
+    external_commands.add_parser("list")
+    external_inspect = external_commands.add_parser("inspect")
+    external_inspect.add_argument("benchmark_id")
+    external_verify = external_commands.add_parser("verify-sha")
+    external_verify.add_argument("benchmark_id")
+    external_compare = external_commands.add_parser("compare-manifest")
+    external_compare.add_argument("left", type=Path)
+    external_compare.add_argument("right", type=Path)
+    external_report = external_commands.add_parser("report")
+    external_report.add_argument("left", type=Path)
+    external_report.add_argument("right", type=Path)
     benchmark = commands.add_parser("benchmark")
     benchmark_commands = benchmark.add_subparsers(dest="benchmark_command", required=True)
     benchmark_commands.add_parser("run")
@@ -574,6 +588,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "social" and args.social_command == "source-list":
         print("No live social sources enabled; only public synthetic fixtures are available.")
         return 0
+    if args.command == "external":
+        return _external_command(args)
 
     config = load_config(args.config)
     engine = create_postgres_engine(config.database)
@@ -1918,6 +1934,90 @@ def _archive_command(args: argparse.Namespace, config: AppConfig, session: Sessi
     session.commit()
     print(json.dumps(results, indent=2))
     return 0
+
+
+def _external_command(args: argparse.Namespace) -> int:
+    from market_evolver.external.comparison import assess_comparison
+    from market_evolver.external.inspection import (
+        inspect_repository,
+        inspection_summary,
+        verify_runnable,
+    )
+    from market_evolver.external.registry import EXTERNAL_BENCHMARKS
+
+    if args.external_command == "list":
+        print(
+            json.dumps(
+                [
+                    {
+                        "benchmark_id": item.benchmark_id,
+                        "name": item.name,
+                        "pinned_git_sha": item.pinned_git_sha,
+                        "license": item.license,
+                        "status": item.status.value,
+                        "local_path": item.local_path,
+                    }
+                    for item in EXTERNAL_BENCHMARKS.list()
+                ],
+                indent=2,
+            )
+        )
+        return 0
+    project_root = Path.cwd()
+    if args.external_command in {"inspect", "verify-sha"}:
+        manifest = inspect_repository(args.benchmark_id, project_root)
+        if args.external_command == "verify-sha":
+            verify_runnable(manifest)
+        output = {
+            "repository": asdict(manifest),
+            "inspection": inspection_summary(args.benchmark_id).as_dict(),
+            "sha_verified": not manifest.dirty,
+            "runnable": EXTERNAL_BENCHMARKS.get(args.benchmark_id).status.value
+            in {"runnable", "evaluated"},
+        }
+        print(json.dumps(output, default=str, indent=2))
+        return 0
+    left = _comparison_manifest_from_json(args.left)
+    right = _comparison_manifest_from_json(args.right)
+    assessment = assess_comparison(left, right)
+    print(
+        json.dumps(
+            {
+                "classification": assessment.classification.value,
+                "critical_differences": assessment.critical_differences,
+                "model_differences": assessment.model_differences,
+                "left_manifest_id": left.manifest_id,
+                "right_manifest_id": right.manifest_id,
+                "winner": None,
+            },
+            indent=2,
+        )
+    )
+    return 0
+
+
+def _comparison_manifest_from_json(path: Path) -> FairComparisonManifest:
+    from market_evolver.external.schemas import ComparisonMode, FairComparisonManifest
+
+    item = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(item, dict):
+        raise GovernanceViolation("comparison manifest must be a JSON object")
+    return FairComparisonManifest(
+        tuple(str(value) for value in item["asset_universe"]),
+        str(item["time_period"]),
+        str(item["initial_capital"]),
+        str(item["transaction_costs"]),
+        str(item["execution_timing"]),
+        str(item["information_set"]),
+        str(item["model_provider"]),
+        str(item["model_settings"]),
+        int(item["number_of_agent_calls"]),
+        str(item["benchmark"]),
+        str(item["currency"]),
+        str(item["fractional_share_policy"]),
+        ComparisonMode(item["mode"]),
+        tuple(str(value) for value in item["provenance"]),
+    )
 
 
 def _benchmark_command(args: argparse.Namespace, config: AppConfig, session: Session) -> int:
